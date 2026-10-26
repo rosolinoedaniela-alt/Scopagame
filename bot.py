@@ -1,3 +1,4 @@
+
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
@@ -5,7 +6,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 TOKEN = os.getenv("BOT_TOKEN")
 
 async def nuova_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🎮 Avvia Partita (Scopa)", url="https://rosolinodaniela-alt.github.io/Scopagame/")]]
+    url_gioco = "https://rosolinodaniela-alt.github.io/Scopagame/"
+    keyboard = [[InlineKeyboardButton("🎮 Avvia Partita (Scopa)", url=url_gioco)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Ecco la nuova partita a Scopa! Clicca qui sotto per giocare:", reply_markup=reply_markup)
 
