@@ -11,4 +11,5 @@ async def nuova_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
-    app
+    app.add_handler(CommandHandler("nuovapartita", nuova_partita))
+    app.run_polling()
