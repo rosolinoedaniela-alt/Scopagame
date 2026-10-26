@@ -1,54 +1,89 @@
+
 import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Configurazione dei log
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    WebAppInfo,
 )
-logger = logging.getLogger(__name__)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+)
 
-# Funzione per gestire il comando /nuovapartita e aprire la Web App
-async def nuovapartita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Link ufficiale del tuo frontend su GitHub Pages
-    web_app_url = "https://rosolinoedaniela-alt.github.io/Scopagame/"
-    
-    keyboard = [
-        [InlineKeyboardButton("🎮 Gioca a Scopa", web_app=WebAppInfo(url=web_app_url))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(
-        "Tavolo da Scopa pronto! Clicca sul pulsante qui sotto per iniziare la partita:",
-        reply_markup=reply_markup
-    )
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 
-# Gestore degli errori per evitare che il bot si spenga silenziosamente
-async def error_handler(object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+URL_GIOCO = "https://rosolinoedaniela-alt.github.io/Scopagame/"
 
-def main() -> None:
-    # Recupera il token dalle variabili d'ambiente di Render
-    token = os.environ.get("BOT_TOKEN")
-    
-    if not token:
-        logger.error("BOT_TOKEN non trovato nelle variabili d'ambiente!")
+
+async def apri_scopa(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    chat = update.effective_chat
+    if chat is None or update.effective_message is None:
         return
 
-    # Inizializzazione dell'applicazione Telegram
-    application = Application.builder().token(token).build()
+    if chat.type == "private":
+        pulsante = InlineKeyboardButton(
+            text="🎮 Gioca a Scopa",
+            web_app=WebAppInfo(url=URL_GIOCO),
+        )
+    else:
+        pulsante = InlineKeyboardButton(
+            text="🎮 Apri la Scopa",
+            url=URL_GIOCO,
+        )
 
-    # Registrazione dei comandi
-    application.add_handler(CommandHandler("nuovapartita", nuovapartita))
-    
-    # Registrazione dell'error handler
-    application.add_error_handler(error_handler)
+    tastiera = InlineKeyboardMarkup([[pulsante]])
 
-    logger.info("Il bot è stato avviato correttamente ed è in ascolto...")
-    
-    # Avvio del polling per mantenere il bot attivo
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    await update.effective_message.reply_text(
+        "🃏 Benvenuto alla Scopa di Dany!\n\n"
+        "Tocca il pulsante per aprire il tavolo da gioco.",
+        reply_markup=tastiera,
+    )
+
+
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    await apri_scopa(update, context)
+
+
+async def nuova_partita(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    await apri_scopa(update, context)
+
+
+def main():
+    token = os.environ.get("BOT_TOKEN")
+
+    if not token:
+        logging.error(
+            "Manca la variabile BOT_TOKEN nelle impostazioni del bot."
+        )
+        return
+
+    app = Application.builder().token(token).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(
+        CommandHandler("nuovapartita", nuova_partita)
+    )
+    app.add_handler(CommandHandler("scopa", apri_scopa))
+
+    logging.info("Bot di Dany avviato.")
+    app.run_polling()
+
 
 if __name__ == "__main__":
     main()
