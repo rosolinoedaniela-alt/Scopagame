@@ -43,7 +43,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("❌ Questa partita è scaduta o non è più attiva. Avviane una nuova con /nuovapartita")
         return
 
-partita = partite_attive[chat_id]
+    partita = partite_attive[chat_id]
 
     if query.data == "unisciti":
         if partita["stato"] != "attesa_avversario":
@@ -62,9 +62,3 @@ partita = partite_attive[chat_id]
             f"Stiamo preparando le carte...",
             parse_mode="Markdown"
         )
-
-if __name__ == "__main__":
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("nuovapartita", nuova_partita))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.run_polling()
