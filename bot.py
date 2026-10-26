@@ -19,91 +19,36 @@ def run_web_server():
 threading.Thread(target=run_web_server, daemon=True).start()
 
 # --- Importazioni Telegram e logica del bot ---
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Dizionario per memorizzare le partite attive nei vari gruppi/chat
 partite_attive = {}
 
-def crea_mazzo():
-    semi = ['Denari', 'Coppe', 'Spade', 'Bastoni']
-    mazzo = []
-    for seme in semi:
-        for valore in range(1, 11):
-            mazzo.append({"valore": valore, "seme": seme})
-    random.shuffle(mazzo)
-    return mazzo
+# Il tuo link di GitHub Pages per la Web App
+URL_WEBAPP = "https://rosolinoedaniela-alt.github.io/Scopagame/"
 
 async def nuova_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user = update.effective_user
     user_name = user.first_name
 
-    # Inizializziamo la partita per questa chat
-    partite_attive[chat_id] = {
-        "giocatore1": {"id": user.id, "nome": user_name, "carte": []},
-        "giocatore2": None,
-        "stato": "attesa_avversario",
-        "tavolo": []
-    }
-
+    # Pulsante per aprire la Web App con il panno verde e le carte napoletane
     keyboard = [
-        [InlineKeyboardButton("🎮 Unisciti alla Partita", callback_data="unisciti")]
+        [InlineKeyboardButton("🎴 Apri Tavolo da Gioco", web_app=WebAppInfo(url=URL_WEBAPP))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
         f"🃏 **{user_name}** ha aperto un tavolo di Scopa!\n"
-        f"Chi vuole sfidarlo? Clicca qui sotto per unirti:",
+        f"Clicca qui sotto per entrare nel tavolo verde con le carte napoletane insieme a Jennifer:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    chat_id = update.effective_chat.id
-    user = update.effective_user
-
-    if chat_id not in partite_attive:
-        await query.edit_message_text("❌ Questa partita è scaduta o non è più attiva. Avviane una nuova con /nuovapartita")
-        return
-
-    partita = partite_attive[chat_id]
-
-    if query.data == "unisciti":
-        if partita["stato"] != "attesa_avversario":
-            await query.answer("C'è già un avversario in questa partita!", show_alert=True)
-            return
-        
-        if user.id == partita["giocatore1"]["id"]:
-            await query.answer("Non puoi giocare da solo contro te stesso!", show_alert=True)
-            return
-
-        partita["giocatore2"] = {"id": user.id, "nome": user.first_name, "carte": []}
-        partita["stato"] = "in_gioco"
-
-        # Creiamo il mazzo napoletano e distribuiamo le carte
-        mazzo = crea_mazzo()
-        partita["tavolo"] = [mazzo.pop() for _ in range(4)]
-        partita["giocatore1"]["carte"] = [mazzo.pop() for _ in range(3)]
-        partita["giocatore2"]["carte"] = [mazzo.pop() for _ in range(3)]
-        partita["mazzo"] = mazzo
-
-        tavolo_str = ", ".join([f"{c['valore']} di {c['seme']}" for c in partita['tavolo']])
-        
-        await query.edit_message_text(
-            f"✅ Partita avviata tra **{partita['giocatore1']['nome']}** e **{partita['giocatore2']['nome']}**!\n\n"
-            f"🎴 **Carte sul tavolo:**\n{tavolo_str}\n\n"
-            f"Le carte sono state distribuite con successo!",
-            parse_mode="Markdown"
-        )
-
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("nuovapartita", nuova_partita))
-    app.add_handler(CallbackQueryHandler(button_handler))
     app.run_polling()
