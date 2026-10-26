@@ -14,63 +14,104 @@
         }
 
         body {
-            background: radial-gradient(circle, #0f522e 0%, #062313 100%);
+            background: radial-gradient(circle, #0a4223 0%, #051d10 100%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #ffffff;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 12px;
+            padding: 10px;
             overflow: hidden;
         }
 
-        /* Intestazione */
+        /* Intestazione stile seconda foto */
         .header {
             text-align: center;
-            border: 1px solid #d4af37;
-            border-radius: 12px;
-            padding: 8px 12px;
-            background: rgba(0, 0, 0, 0.3);
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            padding: 4px 0;
+        }
+
+        .header .presenta {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #d4af37;
+            text-transform: uppercase;
+            margin-bottom: 2px;
         }
 
         .header h1 {
-            font-size: 18px;
+            font-size: 20px;
             color: #f3e5ab;
-            letter-spacing: 2px;
-            margin-bottom: 2px;
+            letter-spacing: 3px;
+            font-weight: bold;
             text-transform: uppercase;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span {
+            font-size: 14px;
+            color: #d4af37;
         }
 
         .header .sub {
             font-size: 11px;
-            color: #a3c9a8;
+            color: #c2d6c4;
+            margin-top: 2px;
         }
 
         .score-board {
-            margin-top: 6px;
+            margin-top: 4px;
             font-size: 14px;
             font-weight: bold;
             color: #ffd700;
         }
 
-        /* Sezione Gioco */
+        /* Barra obiettivo stile seconda foto */
+        .progress-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            height: 8px;
+            margin: 4px 0;
+            overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #f3e5ab);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .objective-text {
+            font-size: 10px;
+            color: #a3c9a8;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        /* Sezioni Gioco */
         .section-title {
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #f3e5ab;
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
+            font-weight: bold;
         }
 
         .area {
-            border: 1px solid rgba(212, 175, 55, 0.5);
+            border: 1px solid #d4af37;
             border-radius: 12px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            min-height: 110px;
+            padding: 8px;
+            background: rgba(4, 26, 14, 0.6);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -85,21 +126,21 @@
             width: 100%;
         }
 
-        /* Carta */
+        /* Carta Grafica */
         .card {
-            width: 65px;
-            height: 100px;
+            width: 60px;
+            height: 95px;
             background-color: #fdfbf7;
             border-radius: 6px;
-            border: 2px solid #333;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            border: 2px solid #b89728;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: 4px;
             cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
             position: relative;
+            transition: transform 0.15s ease;
         }
 
         .card:active {
@@ -107,7 +148,7 @@
         }
 
         .card.selected {
-            border-color: #ffd700;
+            border-color: #ffffff;
             box-shadow: 0 0 12px #ffd700;
             transform: translateY(-6px);
         }
@@ -117,9 +158,9 @@
             background: repeating-linear-gradient(
                 45deg,
                 #8b0000,
-                #8b0000 8px,
-                #a52a2a 8px,
-                #a52a2a 16px
+                #8b0000 6px,
+                #a52a2a 6px,
+                #a52a2a 12px
             );
             border: 2px solid #d4af37;
         }
@@ -136,41 +177,56 @@
         }
 
         .card-center {
-            font-size: 22px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            font-size: 14px;
             text-align: center;
-            line-height: 1;
+        }
+
+        /* Immagini SVG/Illustrate per le figure napoletane */
+        .figure-img {
+            width: 32px;
+            height: 48px;
+            object-fit: contain;
         }
 
         /* Colori Semi Napoletani */
-        .seme-denari { color: #d4af37; }
-        .seme-coppe { color: #d9381e; }
-        .seme-spade { color: #2b5b84; }
-        .seme-bastoni { color: #3e2723; }
+        .seme-denari { color: #b8860b; }
+        .seme-coppe { color: #b22222; }
+        .seme-spade { color: #1e3f66; }
+        .seme-bastoni { color: #4e3629; }
 
         /* Contatore Mazzo */
         .deck-badge {
-            background: rgba(0,0,0,0.6);
-            border: 1px solid #ffd700;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #d4af37;
             border-radius: 12px;
-            padding: 3px 10px;
-            font-size: 11px;
+            padding: 2px 10px;
+            font-size: 10px;
             color: #ffd700;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
+    <!-- Header Personalizzato -->
     <div class="header">
-        <h1>SCOPA</h1>
-        <div class="sub">Carte Napoletane · Tavolo Verde</div>
-        <div class="score-board" id="scoreBoard">Tu 0 — 0 Avversario</div>
+        <div class="presenta">Monopolygoita Presenta</div>
+        <h1><span>♠️</span> Scopa <span>♣️</span></h1>
+        <div class="sub">Carte napoletane · Sfida contro il computer</div>
+        <div class="score-board" id="scoreBoard">Tu 0 — Computer 0</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+        </div>
+        <div class="objective-text">Obiettivo: 11 punti</div>
     </div>
 
     <!-- Area Avversario -->
     <div class="area">
-        <div class="section-title">Avversario</div>
+        <div class="section-title">Avversario · Computer</div>
         <div class="cards-row" id="opponentHand">
             <div class="card card-back"></div>
             <div class="card card-back"></div>
@@ -182,25 +238,28 @@
     <div class="area">
         <div class="section-title">✦ Tavolo da Gioco ✦</div>
         <div class="deck-badge" id="deckCount">🎴 Carte nel mazzo: 30</div>
-        <div class="cards-row" id="tableCards">
-            <!-- Carte sul tavolo generate dinamicamente -->
-        </div>
+        <div class="cards-row" id="tableCards"></div>
     </div>
 
     <!-- Le Tue Carte -->
     <div class="area">
         <div class="section-title">Le Tue Carte</div>
-        <div class="cards-row" id="playerHand">
-            <!-- Carte del giocatore -->
-        </div>
+        <div class="cards-row" id="playerHand"></div>
     </div>
 
     <script>
         const tg = window.Telegram ? window.Telegram.WebApp : null;
         if (tg) tg.expand();
 
+        // SVG dettagliati per le figure napoletane (Fante, Cavallo, Re)
+        const FIGURES = {
+            'Fante': `<svg viewBox="0 0 40 60" class="figure-img"><rect width="40" height="60" fill="#fdfbf7"/><circle cx="20" cy="20" r="8" fill="#ffdbac"/><path d="M12 32h16v20H12z" fill="#0066cc"/><path d="M10 16l10-8 10 8z" fill="#cc0000"/><text x="20" y="23" font-size="8" text-anchor="middle" fill="#333">F</text></svg>`,
+            'Cavallo': `<svg viewBox="0 0 40 60" class="figure-img"><rect width="40" height="60" fill="#fdfbf7"/><path d="M8 20l12-8 12 8v28H8z" fill="#b8860b"/><circle cx="20" cy="22" r="7" fill="#ffdbac"/><text x="20" y="25" font-size="8" text-anchor="middle" fill="#333">C</text></svg>`,
+            'Re': `<svg viewBox="0 0 40 60" class="figure-img"><rect width="40" height="60" fill="#fdfbf7"/><polygon points="12,12 20,4 28,12" fill="#ffd700"/><rect x="10" y="14" width="20" height="38" fill="#4b0082"/><text x="20" y="35" font-size="10" font-weight="bold" text-anchor="middle" fill="#ffd700">RE</text></svg>`
+        };
+
         const SYMBOLS = {
-            'Denari': '🟡',
+            'Denari': '🪙',
             'Coppe': '🏆',
             'Spade': '⚔️',
             'Bastoni': '🪵'
@@ -215,33 +274,42 @@
 
         let tavolo = [
             { valore: 4, seme: 'Denari' },
-            { valore: 3, seme: 'Bastoni' },
-            { valore: 6, seme: 'Bastoni' },
-            { valore: 9, seme: 'Coppe' }
+            { valore: 8, seme: 'Bastoni' },
+            { valore: 9, seme: 'Coppe' },
+            { valore: 10, seme: 'Spade' }
         ];
 
         let miaMano = [
             { valore: 1, seme: 'Denari' },
             { valore: 7, seme: 'Coppe' },
-            { valore: 10, seme: 'Spade' }
+            { valore: 10, seme: 'Denari' }
         ];
 
         function renderCard(carta, onClick) {
             const el = document.createElement('div');
             el.className = 'card';
             
-            const symbol = SYMBOLS[carta.seme] || '🎴';
             const colorClass = CLASS_SEMI[carta.seme] || '';
-
             let valStr = carta.valore;
-            if (carta.valore === 8) valStr = 'Fante';
-            if (carta.valore === 9) valStr = 'Cavallo';
-            if (carta.valore === 10) valStr = 'Re';
+            let centerContent = '';
+
+            if (carta.valore === 8) {
+                valStr = 'Fante';
+                centerContent = FIGURES['Fante'];
+            } else if (carta.valore === 9) {
+                valStr = 'Cavallo';
+                centerContent = FIGURES['Cavallo'];
+            } else if (carta.valore === 10) {
+                valStr = 'Re';
+                centerContent = FIGURES['Re'];
+            } else {
+                centerContent = `<span class="${colorClass}">${SYMBOLS[carta.seme]}</span>`;
+            }
 
             el.innerHTML = `
-                <div class="card-top ${colorClass}">${valStr}</div>
-                <div class="card-center ${colorClass}">${symbol}</div>
-                <div class="card-bottom ${colorClass}">${valStr}</div>
+                <div class="card-top ${colorClass}">${valStr === 1 ? 'Ace' : valStr}</div>
+                <div class="card-center">${centerContent}</div>
+                <div class="card-bottom ${colorClass}">${valStr === 1 ? 'Ace' : valStr}</div>
             `;
 
             if (onClick) {
@@ -266,7 +334,7 @@
             miaMano.forEach(carta => {
                 handEl.appendChild(renderCard(carta, (c, el) => {
                     document.querySelectorAll('#playerHand .card').forEach(card => card.classList.remove('selected'));
-                    el.classList.addClass ? el.classList.add('selected') : el.classList.toggle('selected');
+                    el.classList.toggle('selected');
                 }));
             });
         }
