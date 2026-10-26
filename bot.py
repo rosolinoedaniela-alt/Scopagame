@@ -1,30 +1,54 @@
-import os
+ximport os
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-async def nuovapartita(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # L'indirizzo esatto della tua Web App su GitHub Pages
-    web_app_url = "https://rosolinoedaniela-alt.github.io/Scopagame/"
+# Configurazione dei log
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Funzione per gestire il comando /nuovapartita e aprire la Web App
+async def nuovapartita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Sostituisci l'URL qui sotto con il link ufficiale del tuo frontend su GitHub Pages
+    web_app_url = "https://tuonomeutente.github.io/tuorepo/"
     
     keyboard = [
-        [InlineKeyboardButton("🎴 Apri Tavolo da Gioco", web_app=WebAppInfo(url=web_app_url))]
+        [InlineKeyboardButton("🎮 Gioca a Scopa", web_app=WebAppInfo(url=web_app_url))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "MONOPOLYGOITA PRESENTA\n♠️ SCOPA ♣️\nTavolo pronto! Clicca qui sotto per iniziare la partita:",
+        "Tavolo da Scopa pronto! Clicca sul pulsante qui sotto per iniziare la partita:",
         reply_markup=reply_markup
     )
 
-if __name__ == '__main__':
-    # Legge il token dalle variabili d'ambiente di Render
+# Gestore degli errori per evitare che il bot si spenga silenziosamente
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+
+def main() -> None:
+    # Recupera il token dalle variabili d'ambiente di Render
     token = os.environ.get("BOT_TOKEN")
     
     if not token:
-        raise ValueError("ATTENZIONE: La variabile d'ambiente BOT_TOKEN non è configurata su Render!")
+        logger.error("BOT_TOKEN non trovato nelle variabili d'ambiente!")
+        return
 
-    app = ApplicationBuilder().token(token).build()
-    app.add_handler(CommandHandler("nuovapartita", nuovapartita))
+    # Inizializzazione dell'applicazione Telegram
+    application = Application.builder().token(token).build()
+
+    # Registrazione dei comandi
+    application.add_handler(CommandHandler("nuovapartita", nuovapartita))
     
-    print("Bot avviato e in ascolto!")
-    app.run_polling()
+    # Registrazione dell'error handler
+    application.add_error_handler(error_handler)
+
+    logger.info("Il bot è stato avviato correttamente ed è in ascolto...")
+    
+    # Avvio del polling per mantenere il bot attivo
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    main()
