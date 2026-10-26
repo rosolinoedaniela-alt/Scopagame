@@ -1,4 +1,23 @@
 import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+
+# Mini server web per soddisfare Render
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
+
+# Avviamo il server web in background
+threading.Thread(target=run_web_server, daemon=True).start()
+
+# --- Importazioni Telegram e logica del bot ---
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -62,3 +81,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Stiamo preparando le carte...",
             parse_mode="Markdown"
         )
+
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("nuovapartita", nuova_partita))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.run_polling()
