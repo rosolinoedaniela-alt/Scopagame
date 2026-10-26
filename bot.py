@@ -1,6 +1,7 @@
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+import random
 
 # Mini server web per soddisfare Render
 class SimpleHandler(BaseHTTPRequestHandler):
@@ -25,6 +26,15 @@ TOKEN = os.getenv("BOT_TOKEN")
 
 # Dizionario per memorizzare le partite attive nei vari gruppi/chat
 partite_attive = {}
+
+def crea_mazzo():
+    semi = ['Denari', 'Coppe', 'Spade', 'Bastoni']
+    mazzo = []
+    for seme in semi:
+        for valore in range(1, 11):
+            mazzo.append({"valore": valore, "seme": seme})
+    random.shuffle(mazzo)
+    return mazzo
 
 async def nuova_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -76,9 +86,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         partita["giocatore2"] = {"id": user.id, "nome": user.first_name, "carte": []}
         partita["stato"] = "in_gioco"
 
+        # Creiamo il mazzo napoletano e distribuiamo le carte
+        mazzo = crea_mazzo()
+        partita["tavolo"] = [mazzo.pop() for _ in range(4)]
+        partita["giocatore1"]["carte"] = [mazzo.pop() for _ in range(3)]
+        partita["giocatore2"]["carte"] = [mazzo.pop() for _ in range(3)]
+        partita["mazzo"] = mazzo
+
+        tavolo_str = ", ".join([f"{c['valore']} di {c['seme']}" for c in partita['tavolo']])
+        
         await query.edit_message_text(
             f"✅ Partita avviata tra **{partita['giocatore1']['nome']}** e **{partita['giocatore2']['nome']}**!\n\n"
-            f"Stiamo preparando le carte...",
+            f"🎴 **Carte sul tavolo:**\n{tavolo_str}\n\n"
+            f"Le carte sono state distribuite con successo!",
             parse_mode="Markdown"
         )
 
