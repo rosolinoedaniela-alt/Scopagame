@@ -1,4 +1,4 @@
-ximport os
+import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 # Funzione per gestire il comando /nuovapartita e aprire la Web App
 async def nuovapartita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Sostituisci l'URL qui sotto con il link ufficiale del tuo frontend su GitHub Pages
-    web_app_url = "https://tuonomeutente.github.io/tuorepo/"
+    # Link ufficiale del tuo frontend su GitHub Pages
+    web_app_url = "https://rosolinoedaniela-alt.github.io/Scopagame/"
     
     keyboard = [
         [InlineKeyboardButton("🎮 Gioca a Scopa", web_app=WebAppInfo(url=web_app_url))]
@@ -25,7 +25,7 @@ async def nuovapartita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 # Gestore degli errori per evitare che il bot si spenga silenziosamente
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def error_handler(object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
 
 def main() -> None:
