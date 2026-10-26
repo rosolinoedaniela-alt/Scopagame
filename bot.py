@@ -1,4 +1,3 @@
-
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
@@ -12,6 +11,4 @@ async def nuova_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("nuovapartita", nuova_partita))
-    print("Bot avviato!")
-    app.run_polling()
+    app
