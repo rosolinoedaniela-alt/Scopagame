@@ -1,4 +1,4 @@
-x<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -233,7 +233,6 @@ async function initOrJoinRoom() {
       myRole = 'spectator';
     } else if(gameState.player1_id === userId) {
       myRole = 'player1';
-      // Aggiorna eventuale cambio nome
       if(gameState.player1_name !== userName) {
         gameState.player1_name = userName;
         await supabase.from('scopa_rooms').update({ player1_name: userName }).eq('room_id', roomId);
@@ -330,7 +329,6 @@ function render() {
     }
   }
 
-  // Mano del giocatore corrente
   let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
   if (myHand && myRole !== 'spectator') {
     myHand.forEach(c => {
@@ -350,7 +348,6 @@ function render() {
     pArea.appendChild(info);
   }
 
-  // Avversario (dorsi)
   let oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
   if (oppHand) {
     oppHand.forEach(() => {
