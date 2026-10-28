@@ -294,7 +294,7 @@ function imageURL(c){
 async function initMultiplayer() {
   document.getElementById("connectionStatus").textContent = "Connessione al tavolo...";
 
-  let { data: games, error } = await supabase
+  let { data: games } = await supabase
     .from('games')
     .select('*')
     .eq('chat_id', chatId)
@@ -331,6 +331,7 @@ async function initMultiplayer() {
       await supabase.from('games').update(updateData).eq('id', currentGameId);
       Object.assign(gameState, updateData);
     } else {
+      playerRole = 'spectator';
       document.getElementById("spectateBtn").classList.remove("hidden");
     }
   } else {
@@ -354,7 +355,7 @@ async function initMultiplayer() {
       turn: userId
     };
 
-    const { data: newGame, error: errIns } = await supabase.from('games').insert([newRecord]).select().single();
+    const { data: newGame } = await supabase.from('games').insert([newRecord]).select().single();
 
     if (newGame) {
       currentGameId = newGame.id;
@@ -531,16 +532,3 @@ function sendChat() {
   const val = input.value.trim();
   if(!val) return;
   const log = document.getElementById("chatlog");
-  const line = document.createElement("div");
-  line.innerHTML = "<b>" + userName + ":</b> " + val;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
-  input.value = "";
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  initMultiplayer();
-});
-</script>
-</body>
-</html>
