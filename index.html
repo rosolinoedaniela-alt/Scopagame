@@ -435,4 +435,42 @@ function checkWinCondition() {
   const p2Score = gameState.player2_score || 0;
 
   if (p1Score >= 11 || p2Score >= 11) {
-    gameFinished = true
+    gameFinished = true;
+    let winner = p1Score >= 11 ? gameState.player1_name : gameState.player2_name;
+    
+    document.getElementById("winnerText").textContent = winner + " ha vinto la partita!";
+    document.getElementById("finalScore").textContent = `${gameState.player1_name}: ${p1Score} Punti | ${gameState.player2_name}: ${p2Score} Punti`;
+    
+    const winOverlay = document.getElementById("winOverlay");
+    winOverlay.style.display = "flex";
+
+    let timeLeft = 5;
+    const countdownEl = document.getElementById("countdown");
+    
+    const timer = setInterval(() => {
+      timeLeft--;
+      if(countdownEl) countdownEl.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        try { tg.close(); } catch(e) {}
+      }
+    }, 1000);
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+  const log = document.getElementById("chatlog");
+  const line = document.createElement("div");
+  line.innerHTML = `<b>${userName} ${myRole === 'spectator' ? '(Spettatore)' : ''}:</b> ${val}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
+}
+
+window.addEventListener('DOMContentLoaded', () => { initOrJoinRoom(); });
+</script>
+</body>
+</html>
