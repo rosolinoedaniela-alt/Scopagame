@@ -135,14 +135,13 @@ footer {font-size:8px;color:#d4c39c;padding:2px;flex-shrink:0}
 .hidden{display:none!important}
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="connectionStatus">Tavolo pronto</div>
+ <div id="connectionStatus">Tavolo pronto · Turno tuo</div>
  <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
 </header>
 
@@ -161,7 +160,7 @@ footer {font-size:8px;color:#d4c39c;padding:2px;flex-shrink:0}
  <section class="panel">
   <div id="myRoleLabel" class="label">LE TUE CARTE</div>
   <div id="player" class="area"></div>
-  <button id="play" onclick="playCard()">Gioca carta</button>
+  <button id="play" onclick="playCard()" disabled>Gioca carta</button>
  </section>
 
  <div id="message" aria-live="polite">Tocca una tua carta per giocarla!</div>
@@ -212,6 +211,7 @@ let boardCards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
 let myHand = [deck.pop(), deck.pop(), deck.pop()];
 let oppHand = [{}, {}, {}];
 let selectedCardId = null;
+let isMyTurn = true; // Gestisce il blocco del turno consecutivo
 
 function renderLocal() {
   const pArea = document.getElementById("player");
@@ -228,6 +228,7 @@ function renderLocal() {
     im.src = imageURL(c);
     im.alt = c.file;
     im.onclick = () => {
+      if (!isMyTurn) return; // Impedisce selezioni se non è il tuo turno
       selectedCardId = c.id;
       renderLocal();
     };
@@ -248,11 +249,21 @@ function renderLocal() {
   });
 
   document.getElementById("remaining").textContent = "🂠 MAZZO: " + deck.length;
-  document.getElementById("play").disabled = selectedCardId === null;
+  document.getElementById("play").disabled = !isMyTurn || selectedCardId === null;
+  
+  if (isMyTurn) {
+    document.getElementById("connectionStatustextContent" in window ? "" : "connectionStatus").textContent = "Tavolo pronto · Turno tuo";
+    document.getElementById("message").textContent = "Tocca una tua carta e premi gioca!";
+  } else {
+    document.getElementById("connectionStatus").textContent = "In attesa dell'avversario...";
+    document.getElementById("message").textContent = "Hai giocato! Turno dell'avversario in corso...";
+  }
 }
 
 function playCard() {
-  if (selectedCardId === null) return;
+  if (!isMyTurn || selectedCardId === null) return;
+  
+  // Rimuovi la carta giocata dalla mano
   myHand = myHand.filter(c => c.id !== selectedCardId);
   
   let exactIndex = boardCards.findIndex(c => c.value === selectedCardId);
@@ -261,11 +272,20 @@ function playCard() {
   }
 
   selectedCardId = null;
-  if (myHand.length === 0 && deck.length > 0) {
-    myHand = [deck.pop(), deck.pop(), deck.pop()];
-    oppHand = [{}, {}, {}];
-  }
+  isMyTurn = false; // BLOCCA IL TURNO: non puoi tirare un'altra carta consecutivamente!
   renderLocal();
+
+  // Simula la risposta dell'avversario dopo 3 secondi per sbloccare il turno successivo di prova
+  setTimeout(() => {
+    if (myHand.length === 0 && deck.length > 0) {
+      myHand = [deck.pop(), deck.pop(), deck.pop()];
+      oppHand = [{}, {}, {}];
+    }
+    if (myHand.length > 0) {
+      isMyTurn = true; // Sblocca il turno per te
+      renderLocal();
+    }
+  }, 3500);
 }
 
 function sendChat() {
