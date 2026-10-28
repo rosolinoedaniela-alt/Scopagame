@@ -255,6 +255,7 @@ async function initMultiplayer() {
   if (games && games.length > 0) {
     const game = games[0];
     currentGameId = game.id;
+    gameState = game;
 
     if (game.player1_id === userId) {
       playerRole = 'player1';
@@ -266,27 +267,23 @@ async function initMultiplayer() {
       playerRole = 'player2';
       const deck = makeDeck();
       const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
+      const p1Hand = game.player1_hand && game.player1_hand.length > 0 ? game.player1_hand : [deck.pop(), deck.pop(), deck.pop()];
       const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
 
-      await supabase.from('games').update({
+      const updateData = {
         player2_id: userId,
         player2_name: userName,
         status: 'playing',
         board_cards: board,
         player1_hand: p1Hand,
         player2_hand: p2Hand,
-        player1_captured: [],
-        player2_captured: [],
-        player1_score: 0,
-        player2_score: 0,
-        player1_scope: 0,
-        player2_scope: 0,
         deck: deck,
         turn: game.player1_id
-      }).eq('id', currentGameId);
+      };
 
-      document.getElementById("connectionStatus").textContent = "Partita iniziata con " + game.player1_name;
+      await supabase.from('games').update(updateData).eq('id', currentGameId);
+      Object.assign(gameState, updateData);
+      document.getElementById("connectionStatus").textContent = "Partita iniziata!";
     } else {
       document.getElementById("spectateBtn").classList.remove("hidden");
       document.getElementById("connectionStatus").textContent = "Tavolo occupato. Spettatore disponibile.";
@@ -296,40 +293,35 @@ async function initMultiplayer() {
     const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
     const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
     
-    const { data: newGame } = await supabase.from('games').insert([
-      {
-        chat_id: chatId,
-        player1_id: userId,
-        player1_name: userName,
-        status: 'waiting',
-        board_cards: board,
-        player1_hand: p1Hand,
-        player2_hand: [],
-        player1_captured: [],
-        player2_captured: [],
-        player1_score: 0,
-        player2_score: 0,
-        player1_scope: 0,
-        player2_scope: 0,
-        deck: deck
-      }
-    ]).select().single();
+    const newRecord = {
+      chat_id: chatId,
+      player1_id: userId,
+      player1_name: userName,
+      status: 'waiting',
+      board_cards: board,
+      player1_hand: p1Hand,
+      player2_hand: [],
+      player1_captured: [],
+      player2_captured: [],
+      player1_score: 0,
+      player2_score: 0,
+      player1_scope: 0,
+      player2_scope: 0,
+      deck: deck
+    };
+
+    const { data: newGame } = await supabase.from('games').insert([newRecord]).select().single();
 
     if (newGame) {
       currentGameId = newGame.id;
+      gameState = newGame;
       playerRole = 'player1';
       document.getElementById("connectionStatus").textContent = "Tavolo creato. In attesa...";
     }
   }
 
-  if (currentGameId) {
-    const { data } = await supabase.from('games').select('*').eq('id', currentGameId).single();
-    if (data) {
-      gameState = data;
-      render();
-    }
-    subscribeRealtime();
-  }
+  render();
+  subscribeRealtime();
 }
 
 function joinAsSpectator() {
@@ -374,7 +366,7 @@ function render() {
   }
 
   const myHand = (playerRole === 'spectator' || playerRole === 'player1') ? gameState.player1_hand : gameState.player2_hand;
-  if (myHand) {
+  if (myHand && Array.isArray(myHand)) {
     myHand.forEach(c => {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
@@ -391,7 +383,7 @@ function render() {
   }
 
   const oppHand = (playerRole === 'spectator' || playerRole === 'player1') ? gameState.player2_hand : gameState.player1_hand;
-  if (oppHand) {
+  if (oppHand && Array.isArray(oppHand)) {
     oppHand.forEach(() => {
       const b = document.createElement("div");
       b.className = "card back";
@@ -399,7 +391,7 @@ function render() {
     });
   }
 
-  if (gameState.board_cards) {
+  if (gameState.board_cards && Array.isArray(gameState.board_cards)) {
     gameState.board_cards.forEach(c => {
       const im = document.createElement("img");
       im.className = "card";
