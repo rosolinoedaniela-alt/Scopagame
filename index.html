@@ -9,109 +9,117 @@
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
 body{
  margin:0;
+ padding:0;
  background:radial-gradient(ellipse at top,#287a50,#061c14 78%);
- color:var(--cream);font-family:Arial,sans-serif;text-align:center;min-height:100vh
+ color:var(--cream);
+ font-family:Arial,sans-serif;
+ text-align:center;
+ height:100vh;
+ display:flex;
+ flex-direction:column;
+ justify-content:space-between;
+ overflow:hidden;
 }
+
 header{
- padding:18px 10px 14px;
+ padding:6px 10px;
  background:linear-gradient(135deg,#08291d,#1c6945,#08291d);
- border-bottom:2px solid var(--gold);
- box-shadow:0 5px 22px #0008
+ border-bottom:1px solid var(--gold);
+ flex-shrink:0;
 }
-.brand{font-size:12px;letter-spacing:4px;color:var(--gold)}
-h1{margin:5px 0;color:var(--gold);font-size:clamp(25px,7vw,38px);letter-spacing:3px;text-shadow:0 2px 14px #d2a64b88}
-#score{font-size:18px;font-weight:bold;margin-top:9px}
-.scoreline{max-width:350px;margin:9px auto 0;background:#ffffff22;border-radius:20px;height:8px;overflow:hidden}
-#progress{height:100%;width:0;background:linear-gradient(90deg,#c69a42,#fff0a8);transition:width .4s}
-main{max-width:760px;margin:auto;padding:10px}
+.brand{font-size:9px;letter-spacing:2px;color:var(--gold)}
+h1{margin:2px 0;color:var(--gold);font-size:18px;letter-spacing:1px}
+#score{font-size:13px;font-weight:bold;margin-top:2px}
+#connectionStatus{font-size:10px;color:#f5d58b}
+
+main{
+ flex:1;
+ display:flex;
+ flex-direction:column;
+ justify-content:space-evenly;
+ padding:5px;
+ max-width:500px;
+ margin:auto;
+ width:100%;
+}
+
 .panel{
- margin:12px 0;padding:12px 8px;
- border:1px solid #f5d58b99;border-radius:18px;
+ margin:3px 0;
+ padding:4px;
+ border:1px solid #f5d58b77;
+ border-radius:12px;
  background:linear-gradient(145deg,#ffffff12,#00000022);
- box-shadow:0 10px 28px #0005,inset 0 1px #ffffff12
 }
-.label{font-size:12px;letter-spacing:2px;color:var(--gold);font-weight:bold;margin:2px 0 9px}
-.area{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;min-height:80px;padding:5px}
+
+.label{font-size:10px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:3px}
+.area{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:nowrap;min-height:55px;padding:2px}
+
 #table{
  background:radial-gradient(ellipse,#258456,#0b4931);
- border:3px double #f5d58b;box-shadow:inset 0 0 30px #001d10,0 8px 24px #0006;
- min-height:150px
+ border:2px double #f5d58b;
+ min-height:85px;
 }
 #remaining{
- display:inline-block;margin:0 auto 10px;padding:9px 16px;
- border:2px solid var(--gold);border-radius:25px;
- background:linear-gradient(135deg,#05291d,#174c35);
- color:#ffe7a7;font-weight:bold;font-size:15px;
- box-shadow:0 0 12px #f5d58b33
+ display:inline-block;
+ margin-bottom:2px;
+ padding:2px 10px;
+ border:1px solid var(--gold);
+ border-radius:15px;
+ background:#05291d;
+ color:#ffe7a7;
+ font-size:11px;
 }
+
 .card{
- width:clamp(49px,14vw,82px);height:auto;aspect-ratio:1324/2188;
- object-fit:contain;background:#fff8e9;border:2px solid #e6d5a7;
- border-radius:7px;box-shadow:0 4px 9px #00150c99;
- cursor:pointer;transition:transform .18s,box-shadow .18s
+ width:clamp(38px, 12vw, 55px);
+ height:auto;
+ aspect-ratio:1324/2188;
+ object-fit:contain;
+ background:#fff8e9;
+ border:1px solid #e6d5a7;
+ border-radius:5px;
+ cursor:pointer;
+ transition:transform .15s;
 }
-.card.selected{transform:translateY(-9px);outline:3px solid #ffe17c;box-shadow:0 0 15px #ffdf76}
+.card.selected{transform:translateY(-6px);outline:2px solid #ffe17c;box-shadow:0 0 10px #ffdf76}
 .back{
- height:105px;background:repeating-linear-gradient(45deg,#8b2530,#8b2530 5px,#f2d8a4 6px,#8b2530 9px);
- border:3px double #f2d8a4;border-radius:7px;width:clamp(49px,14vw,82px)
+ height:62px;
+ width:clamp(38px, 12vw, 55px);
+ background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 7px);
+ border:2px double #f2d8a4;
+ border-radius:5px;
 }
+
 button{
- border:1px solid #ffe3a0;border-radius:12px;padding:12px 16px;margin:4px;
- background:linear-gradient(135deg,#ffe6a0,#bd8e35);color:#183522;
- font-weight:bold;font-size:14px;box-shadow:0 3px 9px #0003;cursor:pointer
+ border:1px solid #ffe3a0;
+ border-radius:8px;
+ padding:6px 14px;
+ margin:2px;
+ background:linear-gradient(135deg,#ffe6a0,#bd8e35);
+ color:#183522;
+ font-weight:bold;
+ font-size:12px;
+ cursor:pointer;
 }
-button:active{transform:scale(.97)}
-button:disabled{opacity:.4;cursor:default}
-#message{min-height:0;padding:0;line-height:1.4;font-weight:bold;color:#ffe7a7}
-#chat{text-align:left}
-#chatlog{height:100px;overflow:auto;background:#031c13aa;border-radius:10px;padding:9px;font-size:13px;line-height:1.5}
-.chatrow{display:flex;gap:6px;margin-top:7px}
-#chatInput{min-width:0;flex:1;border-radius:9px;padding:11px;border:1px solid #c6a85e;background:#fdf3d7;color:#183522;font-size:14px}
-.note{font-size:11px;color:#d2c7a9;margin-top:7px}
-footer{font-size:11px;color:#d4c39c;padding:18px}
+#message{font-size:11px;font-weight:bold;color:#ffe7a7;min-height:16px;margin:2px 0}
+
+#chat{margin-top:2px}
+#chatlog{height:45px;overflow-y:auto;background:#031c13aa;border-radius:6px;padding:4px;font-size:11px}
+.chatrow{display:flex;gap:4px;margin-top:3px}
+#chatInput{flex:1;border-radius:6px;padding:4px 8px;border:1px solid #c6a85e;font-size:11px}
+footer{font-size:9px;color:#d4c39c;padding:4px;flex-shrink:0}
 .hidden{display:none!important}
-#modal{position:fixed;inset:0;z-index:10;background:#00150fee;display:flex;align-items:center;justify-content:center;padding:14px}
-.dialog{
- width:min(100%,440px);max-height:90vh;overflow:auto;
- background:linear-gradient(145deg,#15533a,#08291d);
- border:2px solid var(--gold);border-radius:20px;padding:19px 14px;
- box-shadow:0 0 35px #0009
-}
-.dialog h2{color:var(--gold);margin:3px 0 7px}
-#recapScore{font-size:17px;font-weight:bold;margin:8px}
-.recaprow{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:8px;padding:9px 7px;border-bottom:1px solid #ffffff20;font-size:13px}
-.recaprow strong{color:#ffe4a0;white-space:nowrap}
-#resultTitle{font-size:18px;color:#ffe5a1;font-weight:bold;margin:12px 0}
-#confetti{position:fixed;inset:0;z-index:8;pointer-events:none;overflow:hidden}
-.confetto{position:absolute;top:-15px;width:8px;height:13px;animation:fall 2.5s linear forwards}
-@keyframes fall{to{transform:translateY(110vh) rotate(780deg);opacity:.1}}
-#scopaBanner{
- position:fixed;z-index:9;left:0;right:0;top:37%;
- font-size:clamp(42px,12vw,72px);font-weight:1000;color:#ffe68c;
- text-shadow:0 0 10px #f80,0 4px 0 #79420d,0 0 30px #ffd34d;
- pointer-events:none;animation:pop 1.25s ease forwards
-}
-@keyframes pop{
- 0%{opacity:0;transform:scale(.2) rotate(-10deg)}
- 25%{opacity:1;transform:scale(1.2) rotate(4deg)}
- 65%{opacity:1;transform:scale(1)}
- 100%{opacity:0;transform:scale(1.1) translateY(-45px)}
-}
 </style>
-<!-- Supabase SDK -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Telegram WebApp SDK -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <header>
  <div class="brand">MONOPOLYGOITA PRESENTA</div>
  <h1>♠ SCOPA ♣ (Multiplayer)</h1>
- <div id="connectionStatus" style="color:#f5d58b; font-size:12px; margin-top:4px">Connessione a Supabase in corso...</div>
- <div style="color:#f9e5b1">Carte napoletane · 1v1 in tempo reale</div>
+ <div id="connectionStatus">Connessione a Supabase in corso...</div>
  <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
- <div class="scoreline"><div id="progress"></div></div>
- <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
 </header>
 
 <main>
@@ -136,33 +144,17 @@ footer{font-size:11px;color:#d4c39c;padding:18px}
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO</div>
-  <div id="chatlog" aria-live="polite">Connesso al tavolo multiplayer.</div>
+  <div id="chatlog" aria-live="polite">Connesso al tavolo.</div>
   <div class="chatrow">
-   <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
+   <input id="chatInput" maxlength="180" placeholder="Messaggio…">
    <button onclick="sendChat()">Invia</button>
   </div>
  </section>
 </main>
 
 <footer>Scopa Napoletana · Monopolygoita</footer>
-<div id="confetti"></div>
-<div id="scopaBanner" class="hidden">SCOPA!</div>
-
-<div id="modal" class="hidden">
- <div class="dialog">
-  <div class="brand">MONOPOLYGOITA</div>
-  <h2 id="modalTitle">Riepilogo della mano</h2>
-  <div id="resultTitle"></div>
-  <div id="recapScore"></div>
-  <div id="recapRows"></div>
-  <button id="continueButton" onclick="continueGame()">Continua</button>
- </div>
-</div>
 
 <script>
-// ==========================================
-// CONFIGURAZIONE SUPABASE E TELEGRAM
-// ==========================================
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -176,7 +168,7 @@ const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 const chatId = tg.initDataUnsafe?.chat?.id || 123456789;
 
 let currentGameId = null;
-let playerRole = null; // 'player1' o 'player2'
+let playerRole = null;
 let gameState = {
   board_cards: [],
   player1_hand: [],
@@ -231,13 +223,9 @@ function imageURL(c){
  return "https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(c.file);
 }
 
-// ==========================================
-// INIZIALIZZAZIONE PARTITA MULTIPLAYER
-// ==========================================
 async function initMultiplayer() {
-  document.getElementById("connectionStatus").textContent = "Connessione al tavolo della chat...";
+  document.getElementById("connectionStatus").textContent = "Ricerca tavolo...";
 
-  // Cerca partita in attesa nella chat
   let { data: games, error } = await supabase
     .from('games')
     .select('*')
@@ -250,18 +238,17 @@ async function initMultiplayer() {
     if (game.player1_id === userId) {
       currentGameId = game.id;
       playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "In attesa che un avversario si unisca...";
+      document.getElementById("connectionStatus").textContent = "In attesa di un avversario...";
     } else {
       currentGameId = game.id;
       playerRole = 'player2';
       
-      // Inizia la partita distribuendo le carte iniziali
       const deck = makeDeck();
       const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
       const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
       const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
 
-      const { error: updateErr } = await supabase.from('games').update({
+      await supabase.from('games').update({
         player2_id: userId,
         player2_name: userName,
         status: 'playing',
@@ -272,12 +259,10 @@ async function initMultiplayer() {
         turn: game.player1_id
       }).eq('id', currentGameId);
 
-      if (updateErr) console.error(updateErr);
-      document.getElementById("connectionStatus").textContent = "Partita avviata con " + game.player1_name + "!";
+      document.getElementById("connectionStatus").textContent = "In gioco con " + game.player1_name;
     }
   } else {
-    // Crea nuova partita come Giocatore 1
-    const { data: newGame, error: err } = await supabase.from('games').insert([
+    const { data: newGame } = await supabase.from('games').insert([
       {
         chat_id: chatId,
         player1_id: userId,
@@ -290,14 +275,11 @@ async function initMultiplayer() {
       }
     ]).select().single();
 
-    if (err) {
-      console.error("Errore creazione partita:", err);
-      return;
+    if(newGame) {
+      currentGameId = newGame.id;
+      playerRole = 'player1';
+      document.getElementById("connectionStatus").textContent = "Tavolo creato! In attesa del Giocatore 2...";
     }
-
-    currentGameId = newGame.id;
-    playerRole = 'player1';
-    document.getElementById("connectionStatus").textContent = "Tavolo creato! In attesa di un secondo giocatore...";
   }
 
   subscribeRealtime();
@@ -317,7 +299,6 @@ function subscribeRealtime() {
     })
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        // Carica stato attuale fresco
         const { data } = await supabase.from('games').select('*').eq('id', currentGameId).single();
         if (data) {
           gameState = data;
@@ -327,9 +308,6 @@ function subscribeRealtime() {
     });
 }
 
-// ==========================================
-// RENDER DELLA GRAFICA SUL CLIENT
-// ==========================================
 function render() {
   const pArea = document.getElementById("player");
   const mArea = document.getElementById("middle");
@@ -339,12 +317,10 @@ function render() {
   mArea.replaceChildren();
   oArea.replaceChildren();
 
-  // Etichette ruoli
   const isP1 = playerRole === 'player1';
   document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : gameState.player2_name) + ")";
   document.getElementById("opponentLabel").textContent = "AVVERSARIO · " + (isP1 ? (gameState.player2_name || "In attesa...") : gameState.player1_name);
 
-  // Carte in mano nostra
   const myHand = isP1 ? gameState.player1_hand : gameState.player2_hand;
   if (myHand) {
     myHand.forEach(c => {
@@ -362,7 +338,6 @@ function render() {
     });
   }
 
-  // Carte avversario (coperte)
   const oppHand = isP1 ? gameState.player2_hand : gameState.player1_hand;
   if (oppHand) {
     oppHand.forEach(() => {
@@ -372,7 +347,6 @@ function render() {
     });
   }
 
-  // Carte a terra
   if (gameState.board_cards) {
     gameState.board_cards.forEach(c => {
       const im = document.createElement("img");
@@ -382,7 +356,6 @@ function render() {
     });
   }
 
-  // Info mazzo e turno
   if (gameState.deck) {
     document.getElementById("remaining").textContent = "🂠 CARTE NEL MAZZO: " + gameState.deck.length;
   }
@@ -391,11 +364,11 @@ function render() {
   document.getElementById("play").disabled = !myTurn || selectedCardId === null;
 
   if (gameState.status === 'waiting') {
-    say("In attesa che un altro giocatore entri nel gruppo...");
+    say("In attesa che un altro giocatore entri...");
   } else if (myTurn) {
-    say("È il tuo turno! Seleziona una carta e premi Gioca carta.");
+    say("Tocca a te! Scegli una carta e premi Gioca.");
   } else {
-    say("Turno dell'avversario. Attendi la sua mossa...");
+    say("Turno dell'avversario...");
   }
 }
 
@@ -403,48 +376,36 @@ function say(t) {
   document.getElementById("message").textContent = t;
 }
 
-// ==========================================
-// LOGICA DELLA MOSSA
-// ==========================================
 async function playPlayerCard() {
   const isP1 = playerRole === 'player1';
   const myHand = isP1 ? [...gameState.player1_hand] : [...gameState.player2_hand];
   const card = myHand.find(c => c.id === selectedCardId);
   if (!card) return;
 
-  // Rimuovi carta dalla mano
   const newMyHand = myHand.filter(c => c.id !== card.id);
   let board = [...gameState.board_cards];
 
-  // Regola semplificata presa Scopa: cerca carta uguale o somma
   const exactIndex = board.findIndex(c => c.value === card.value);
   if (exactIndex !== -1) {
-    board.splice(exactIndex, 1); // Prende la carta corrispondente
-    say("Presa effettuata!");
+    board.splice(exactIndex, 1);
   } else {
-    board.push(card); // Lascia la carta a terra
-    say("Carta calata sul tavolo.");
+    board.push(card);
   }
 
-  // Determina prossimo turno
   const oppId = isP1 ? gameState.player2_id : gameState.player1_id;
-  const nextTurn = oppId;
 
-  // Aggiorna stato su Supabase
   const updatePayload = isP1 ? {
     player1_hand: newMyHand,
     board_cards: board,
-    turn: nextTurn
+    turn: oppId
   } : {
     player2_hand: newMyHand,
     board_cards: board,
-    turn: nextTurn
+    turn: oppId
   };
 
   selectedCardId = null;
-
-  const { error } = await supabase.from('games').update(updatePayload).eq('id', currentGameId);
-  if (error) console.error("Errore invio mossa:", error);
+  await supabase.from('games').update(updatePayload).eq('id', currentGameId);
 }
 
 function sendChat() {
@@ -459,11 +420,6 @@ function sendChat() {
   input.value = "";
 }
 
-document.getElementById("chatInput").addEventListener("keydown", e => {
-  if(e.key === "Enter") sendChat();
-});
-
-// Avvio all'apertura
 window.addEventListener('DOMContentLoaded', () => {
   initMultiplayer();
 });
