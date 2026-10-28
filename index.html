@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Scopa Monopolygoita</title>
+<title>Scopa Monopolygoita Online</title>
 <style>
 *{box-sizing:border-box}
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
@@ -77,7 +77,6 @@ main {
 button { border:1px solid #ffe3a0; border-radius:4px; padding:2px 8px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
 button:disabled{opacity:0.4;cursor:not-allowed}
 
-#message{font-size:8px;font-weight:bold;color:#ffe7a7;min-height:10px;margin:0}
 #chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
 #chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:2px; }
 .chatrow {display:flex; gap:3px; width:100%}
@@ -92,6 +91,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -105,15 +105,15 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <h2>🏆 RISULTATO FINALE 🏆</h2>
   <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
   <div id="finalScore" style="font-size:12px; color:var(--gold); margin-bottom:15px;"></div>
-  <p style="font-size:9px; color:#aaa;">Ritorno al gruppo in <span id="countdown">5</span> secondi...</p>
+  <p style="font-size:9px; color:#aaa;">Ritorno al gruppo in <span id="countdown">5</span> seconds...</p>
  </div>
 </div>
 
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="score">Punti - In attesa...</div>
- <div id="connectionStatus">Modalità locale attiva</div>
+ <div id="score">Punti - Connessione in corso...</div>
+ <div id="connectionStatus">Sincronizzazione online attiva</div>
 </header>
 
 <main>
@@ -129,254 +129,4 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  </section>
 
  <section class="panel" id="playerPanel">
-  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
-  <div id="player" class="area"></div>
-  <div class="action-row">
-   <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-  </div>
- </section>
-
- <div id="message" aria-live="polite">Partita pronta!</div>
-
- <section class="panel" id="chat">
-  <div class="label">💬 CHAT DEL TAVOLO</div>
-  <div id="chatlog" aria-live="polite">Connesso alla chat.</div>
-  <div class="chatrow">
-   <input id="chatInput" maxlength="180" placeholder="Scrivi messaggio…">
-   <button onclick="sendChat()" style="padding:1px 4px; font-size:7px; height:18px; line-height:16px;">Invia</button>
-  </div>
- </section>
-</main>
-
-<footer>Scopa Napoletana · Monopolygoita</footer>
-
-<script>
-const tg = window.Telegram?.WebApp || {};
-try { if (tg.expand) tg.expand(); } catch(e){}
-
-const user = tg.initDataUnsafe?.user;
-const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Daniela83Divaa';
-
-const urlParams = new URLSearchParams(window.location.search);
-let isSpectator = urlParams.get('role') === 'spectator';
-
-let gameFinished = false;
-let gameState = {
-  board_cards: [],
-  player1_name: userName,
-  player2_name: 'Avversario',
-  player1_hand: [],
-  player2_hand: [],
-  player1_score: 0,
-  player2_score: 0,
-  turn: 'player1',
-  deck: []
-};
-let selectedCardId = null;
-
-const files = [
-  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
-  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
-  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
-  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
-];
-
-function makeDeck(){
- const d = files.map((file, i) => ({ id: i+1, rank: (i % 10) + 1, file }));
- for(let i = d.length - 1; i > 0; i--){
-  const j = Math.floor(Math.random() * (i + 1));
-  [d[i], d[j]] = [d[j], d[i]];
- }
- return d;
-}
-
-function imageURL(c){
- if (!c || !c.file) return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent("01 Asso di denari.jpg");
- let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg");
- return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
-}
-
-function initGame() {
-  const deck = makeDeck();
-  gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-  gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-  gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-  gameState.deck = deck;
-  
-  document.getElementById("connectionStatus").textContent = "Pronto · Ruolo: " + (isSpectator ? "Spettatore 👁️" : userName);
-  render();
-}
-
-function render() {
-  const pArea = document.getElementById("player");
-  const tContainer = document.getElementById("tableRowsContainer");
-  const oArea = document.getElementById("opponent");
-  const pPanel = document.getElementById("playerPanel");
-  const oPanel = document.getElementById("opponentPanel");
-
-  pArea.replaceChildren();
-  tContainer.replaceChildren();
-  oArea.replaceChildren();
-
-  const isMyTurn = gameState.turn === 'player1';
-  
-  if (isMyTurn && !isSpectator) {
-    pPanel.classList.add('active-turn');
-    oPanel.classList.remove('active-turn');
-    document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (" + userName + " - È IL TUO TURNO!) ✦";
-    document.getElementById("opponentLabel").textContent = "AVVERSARIO";
-  } else {
-    pPanel.classList.remove('active-turn');
-    oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + userName + (isSpectator ? " - SPETTATORE 👁️" : " - ATTENDI") + ")";
-    document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO ✦";
-  }
-
-  // Tavolo a due file (massimo 5 carte per fila per ordine perfetto)
-  if (gameState.board_cards) {
-    const row1Cards = gameState.board_cards.slice(0, 5);
-    const row2Cards = gameState.board_cards.slice(5);
-
-    const r1 = document.createElement("div");
-    r1.className = "table-row";
-    row1Cards.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card";
-      im.src = imageURL(c);
-      r1.appendChild(im);
-    });
-    tContainer.appendChild(r1);
-
-    if (row2Cards.length > 0) {
-      const r2 = document.createElement("div");
-      r2.className = "table-row";
-      row2Cards.forEach(c => {
-        const im = document.createElement("img");
-        im.className = "card";
-        im.src = imageURL(c);
-        r2.appendChild(im);
-      });
-      tContainer.appendChild(r2);
-    }
-  }
-
-  // Mano del giocatore (ora corregge la visualizzazione delle 3 carte)
-  if (gameState.player1_hand && !isSpectator) {
-    gameState.player1_hand.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
-      im.src = imageURL(c);
-      im.onclick = () => { 
-        if(isMyTurn) {
-          selectedCardId = c.id; 
-          render(); 
-        }
-      };
-      pArea.appendChild(im);
-    });
-  } else if (isSpectator) {
-    const info = document.createElement("div");
-    info.style.fontSize = "8px";
-    info.style.color = "#ffe7a7";
-    info.textContent = "Modalità Spettatore: Stai guardando la partita.";
-    pArea.appendChild(info);
-  }
-
-  // Avversario (dorsi)
-  if (gameState.player2_hand) {
-    gameState.player2_hand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
-  }
-
-  document.getElementById("score").textContent = `Punti - ${userName}: ${gameState.player1_score}/11 | Avversario: ${gameState.player2_score}/11`;
-  document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
-}
-
-function playPlayerCard() {
-  if (isSpectator || selectedCardId === null) return;
-  
-  const card = gameState.player1_hand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  gameState.player1_hand = gameState.player1_hand.filter(c => c.id !== card.id);
-  gameState.board_cards.push(card);
-
-  let isScopa = gameState.board_cards.length === 1;
-  if(isScopa) {
-    triggerPartyAnimation();
-    gameState.player1_score += 1;
-  }
-
-  gameState.turn = 'player2';
-  selectedCardId = null;
-  render();
-  checkWinCondition();
-
-  // Risposta fittizia dell'avversario dopo 1 secondo
-  setTimeout(() => {
-    if(gameState.player2_hand.length > 0 && !gameFinished) {
-      const oppCard = gameState.player2_hand.pop();
-      gameState.board_cards.push(oppCard);
-      gameState.turn = 'player1';
-      render();
-      checkWinCondition();
-    }
-  }, 1000);
-}
-
-function triggerPartyAnimation() {
-  const overlay = document.getElementById("partyOverlay");
-  overlay.style.display = "flex";
-  setTimeout(() => { overlay.style.display = "none"; }, 2000);
-}
-
-function checkWinCondition() {
-  if (gameFinished) return;
-  
-  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
-    gameFinished = true;
-    let winner = gameState.player1_score >= 11 ? userName : "Avversario";
-    
-    document.getElementById("winnerText").textContent = winner + " ha vinto la partita!";
-    document.getElementById("finalScore").textContent = `${userName}: ${gameState.player1_score} Punti | Avversario: ${gameState.player2_score} Punti`;
-    
-    const winOverlay = document.getElementById("winOverlay");
-    winOverlay.style.display = "flex";
-
-    let timeLeft = 5;
-    const countdownEl = document.getElementById("countdown");
-    
-    const timer = setInterval(() => {
-      timeLeft--;
-      if(countdownEl) countdownEl.textContent = timeLeft;
-      if (timeLeft <= 0) {
-        clearInterval(timer);
-        try { tg.close(); } catch(e) {}
-      }
-    }, 1000);
-  }
-}
-
-function sendChat() {
-  const input = document.getElementById("chatInput");
-  const val = input.value.trim();
-  if(!val) return;
-  const log = document.getElementById("chatlog");
-  const line = document.createElement("div");
-  line.innerHTML = `<b>${userName}:</b> ${val}`;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
-  input.value = "";
-}
-
-window.addEventListener('DOMContentLoaded', () => { initGame(); });
-</script>
-</body>
-</html>
+  <div id="myRoleLabel" class="label
