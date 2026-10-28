@@ -232,7 +232,7 @@ function render() {
     document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO ✦";
   }
 
-  // Tavolo a due file
+  // Tavolo a due file (massimo 5 carte per fila per ordine perfetto)
   if (gameState.board_cards) {
     const row1Cards = gameState.board_cards.slice(0, 5);
     const row2Cards = gameState.board_cards.slice(5);
@@ -260,15 +260,18 @@ function render() {
     }
   }
 
-  // Mano del giocatore
+  // Mano del giocatore (ora corregge la visualizzazione delle 3 carte)
   if (gameState.player1_hand && !isSpectator) {
     gameState.player1_hand.forEach(c => {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
       im.src = imageURL(c);
-      if(isMyTurn) {
-        im.onclick = () => { selectedCardId = c.id; render(); };
-      }
+      im.onclick = () => { 
+        if(isMyTurn) {
+          selectedCardId = c.id; 
+          render(); 
+        }
+      };
       pArea.appendChild(im);
     });
   } else if (isSpectator) {
@@ -316,7 +319,7 @@ function playPlayerCard() {
   render();
   checkWinCondition();
 
-  // Risposta fittizia dell'avversario dopo 1 secondo per testare la partita
+  // Risposta fittizia dell'avversario dopo 1 secondo
   setTimeout(() => {
     if(gameState.player2_hand.length > 0 && !gameFinished) {
       const oppCard = gameState.player2_hand.pop();
