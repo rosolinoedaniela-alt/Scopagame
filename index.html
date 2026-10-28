@@ -78,4 +78,281 @@ button { border:1px solid #ffe3a0; border-radius:4px; padding:2px 8px; backgroun
 button:disabled{opacity:0.4;cursor:not-allowed}
 
 #chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
-#chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:1
+#chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:2px; }
+.chatrow {display:flex; gap:3px; width:100%}
+#chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
+
+#partyOverlay, #winOverlay {
+ position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85);
+ display:none; flex-direction:column; justify-content:center; align-items:center; z-index:999; color:var(--gold);
+}
+#partyOverlay h2, #winOverlay h2 { font-size: 24px; margin: 0; text-shadow: 0 0 10px #ffdf76; animation: bounce 0.5s infinite alternate; }
+.win-box { background: rgba(6, 62, 43, 0.95); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
+@keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
+</style>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="partyOverlay">
+ <h2>🎉 SCOPA! 🎉</h2>
+ <p style="font-size:12px; color:#fff;">Grande mossa!</p>
+</div>
+
+<div id="winOverlay">
+ <div class="win-box">
+  <h2>🏆 RISULTATO FINALE 🏆</h2>
+  <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
+  <div id="finalScore" style="font-size:12px; color:var(--gold); margin-bottom:15px;"></div>
+  <p style="font-size:9px; color:#aaa;">Ritorno al gruppo in <span id="countdown">5</span> seconds...</p>
+ </div>
+</div>
+
+<header>
+ <div class="brand">Dany presenta</div>
+ <h1>Scopa di Monopolygoita</h1>
+ <div id="score">Punti - Connessione in corso...</div>
+ <div id="connectionStatus">Sincronizzazione online attiva</div>
+</header>
+
+<main>
+ <section class="panel" id="opponentPanel">
+  <div id="opponentLabel" class="label">AVVERSARIO</div>
+  <div id="opponent" class="area"></div>
+ </section>
+
+ <section class="panel" id="table">
+  <div id="remaining">🂠 --</div>
+  <div class="label" style="margin-bottom:0;">✦ TAVOLO DA GIOCO ✦</div>
+  <div id="tableRowsContainer" style="width:100%; display:flex; flex-direction:column; gap:3px;"></div>
+ </section>
+
+ <section class="panel" id="playerPanel">
+  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
+  <div id="player" class="area"></div>
+  <div class="action-row">
+   <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
+   <button id="inviteBtn" onclick="copySpectatorLink()" style="background:linear-gradient(135deg,#8ae9ff,#207fa3); color:#fff;">📢 Invita Spettatore</button>
+  </div>
+ </section>
+
+ <section class="panel" id="chat">
+  <div class="label">💬 CHAT DELLA STANZA & SPETTATORI</div>
+  <div id="chatlog" aria-live="polite">Connesso alla chat globale.</div>
+  <div class="chatrow">
+   <input id="chatInput" maxlength="180" placeholder="Scrivi messaggio o tifo…">
+   <button onclick="sendChat()" style="padding:1px 4px; font-size:7px; height:18px; line-height:16px;">Invia</button>
+  </div>
+ </section>
+</main>
+
+<footer>Scopa Napoletana · Monopolygoita</footer>
+
+<script>
+const tg = window.Telegram?.WebApp || {};
+try { if (tg.expand) tg.expand(); } catch(e){}
+
+const user = tg.initDataUnsafe?.user;
+const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Daniela83Divaa';
+
+const urlParams = new URLSearchParams(window.location.search);
+let isSpectator = urlParams.get('role') === 'spectator';
+const ROOM_ID = 'stanza_principale';
+
+// CREDENZIALI SUPABASE CONFIGURATE CORRETTAMENTE
+const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
+const SUPABASE_KEY = 'Sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let gameState = null;
+let selectedCardId = null;
+let gameFinished = false;
+
+const files = [
+  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
+  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
+  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+];
+
+function makeDeck(){
+ const d = files.map((file, i) => ({ id: i+1, rank: (i % 10) + 1, file }));
+ for(let i = d.length - 1; i > 0; i--){
+  const j = Math.floor(Math.random() * (i + 1));
+  [d[i], d[j]] = [d[j], d[i]];
+ }
+ return d;
+}
+
+function imageURL(c){
+ if (!c || !c.file) return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent("01 Asso di denari.jpg");
+ let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg");
+ return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
+}
+
+async function initRoom() {
+  const { data, error } = await supabaseClient
+    .from('scopa_rooms')
+    .select('*')
+    .eq('room_id', ROOM_ID)
+    .single();
+
+  if (error || !data) {
+    if(!isSpectator) {
+      const deck = makeDeck();
+      const newGame = {
+        room_id: ROOM_ID,
+        board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
+        player1_id: userName,
+        player1_hand: [deck.pop(), deck.pop(), deck.pop()],
+        player2_id: null,
+        player2_hand: [deck.pop(), deck.pop(), deck.pop()],
+        player1_score: 0,
+        player2_score: 0,
+        turn: 'player1',
+        deck: deck,
+        chat: []
+      };
+      await supabaseClient.from('scopa_rooms').upsert(newGame);
+      gameState = newGame;
+    }
+  } else {
+    gameState = data;
+    if (!isSpectator && !gameState.player2_id && gameState.player1_id !== userName) {
+      gameState.player2_id = userName;
+      await updateRemoteState();
+    }
+  }
+  
+  render();
+  subscribeRealtime();
+}
+
+function subscribeRealtime() {
+  supabaseClient
+    .channel('public:scopa_rooms')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
+      gameState = payload.new;
+      render();
+    })
+    .subscribe();
+}
+
+async function updateRemoteState() {
+  await supabaseClient.from('scopa_rooms').upsert(gameState);
+}
+
+function render() {
+  if (!gameState) return;
+  const pArea = document.getElementById("player");
+  const tContainer = document.getElementById("tableRowsContainer");
+  const oArea = document.getElementById("opponent");
+  const pPanel = document.getElementById("playerPanel");
+  const oPanel = document.getElementById("opponentPanel");
+
+  pArea.replaceChildren();
+  tContainer.replaceChildren();
+  oArea.replaceChildren();
+
+  let myRole = 'player1';
+  if (userName === gameState.player2_id) myRole = 'player2';
+  else if (isSpectator || (gameState.player1_id && gameState.player2_id && gameState.player1_id !== userName && gameState.player2_id !== userName)) {
+    isSpectator = true;
+    myRole = 'spectator';
+  }
+
+  const isMyTurn = gameState.turn === myRole;
+
+  if (isMyTurn && !isSpectator) {
+    pPanel.classList.add('active-turn');
+    oPanel.classList.remove('active-turn');
+    document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (" + userName + " - È IL TUO TURNO!) ✦";
+  } else {
+    pPanel.classList.remove('active-turn');
+    oPanel.classList.add('active-turn');
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + userName + (isSpectator ? " - SPETTATORE 👁️" : " - ATTENDI IL TURNO") + ")";
+  }
+
+  // Tavolo
+  if (gameState.board_cards) {
+    const row1 = gameState.board_cards.slice(0, 5);
+    const row2 = gameState.board_cards.slice(5);
+
+    const r1 = document.createElement("div");
+    r1.className = "table-row";
+    row1.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card";
+      im.src = imageURL(c);
+      r1.appendChild(im);
+    });
+    tContainer.appendChild(r1);
+
+    if (row2.length > 0) {
+      const r2 = document.createElement("div");
+      r2.className = "table-row";
+      row2.forEach(c => {
+        const im = document.createElement("img");
+        im.className = "card";
+        im.src = imageURL(c);
+        r2.appendChild(im);
+      });
+      tContainer.appendChild(r2);
+    }
+  }
+
+  // Mano del giocatore attivo
+  const myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
+  if (myHand && !isSpectator) {
+    myHand.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
+      im.src = imageURL(c);
+      if(isMyTurn) {
+        im.onclick = () => { selectedCardId = c.id; render(); };
+      }
+      pArea.appendChild(im);
+    });
+  } else if (isSpectator) {
+    const info = document.createElement("div");
+    info.style.fontSize = "8px";
+    info.style.color = "#ffe7a7";
+    info.textContent = "Modalità Spettatore: Stai guardando la partita in tempo reale.";
+    pArea.appendChild(info);
+  }
+
+  // Avversario (dorsi)
+  const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
+  if (oppHand) {
+    oppHand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
+  }
+
+  if (gameState.deck) {
+    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+  }
+
+  document.getElementById("score").textContent = `Punti - ${gameState.player1_id || 'P1'}: ${gameState.player1_score} | ${gameState.player2_id || 'P2'}: ${gameState.player2_score}`;
+  document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
+
+  // Aggiorna Chat Log
+  if (gameState.chat) {
+    const log = document.getElementById("chatlog");
+    log.replaceChildren();
+    gameState.chat.forEach(msg => {
+      const line = document.createElement("div");
+      line.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
+      log.appendChild(line);
+    });
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+async function playPlayerCard() {
+  if (isSpectator || selectedCardId === null) return;
+  let myRole = (
