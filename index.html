@@ -74,7 +74,7 @@ main {
 }
 
 .action-row { display:flex; align-items:center; gap:4px; width:100%; justify-content:center; margin-top:1px; }
-button { border:1px solid #ffe3a0; border-radius:4px; padding:2px 8px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
+button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 12px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
 button:disabled{opacity:0.4;cursor:not-allowed}
 
 #chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
@@ -133,7 +133,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button id="inviteBtn" onclick="copySpectatorLink()" style="background:linear-gradient(135deg,#8ae9ff,#207fa3); color:#fff;">📢 Invita Spettatore</button>
   </div>
  </section>
 
@@ -160,7 +159,6 @@ const urlParams = new URLSearchParams(window.location.search);
 let isSpectator = urlParams.get('role') === 'spectator';
 const ROOM_ID = 'stanza_principale';
 
-// CREDENZIALI SUPABASE CONFIGURATE CORRETTAMENTE
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
 const SUPABASE_KEY = 'Sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
 
@@ -355,4 +353,54 @@ function render() {
 
 async function playPlayerCard() {
   if (isSpectator || selectedCardId === null) return;
-  let myRole = (
+  let myRole = (userName === gameState.player2_id) ? 'player2' : 'player1';
+  if (gameState.turn !== myRole) return;
+
+  let hand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
+  const card = hand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  if (myRole === 'player2') {
+    gameState.player2_hand = hand.filter(c => c.id !== card.id);
+  } else {
+    gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  }
+
+  gameState.board_cards.push(card);
+
+  if(gameState.board_cards.length === 1) {
+    if(myRole === 'player1') gameState.player1_score += 1;
+    else gameState.player2_score += 1;
+    triggerPartyAnimation();
+  }
+
+  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
+  selectedCardId = null;
+
+  await updateRemoteState();
+  render();
+}
+
+function triggerPartyAnimation() {
+  const overlay = document.getElementById("partyOverlay");
+  overlay.style.display = "flex";
+  setTimeout(() => { overlay.style.display = "none"; }, 2000);
+}
+
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+
+  if(!gameState.chat) gameState.chat = [];
+  gameState.chat.push({ user: userName, text: val });
+  if(gameState.chat.length > 20) gameState.chat.shift();
+
+  input.value = "";
+  await updateRemoteState();
+}
+
+window.addEventListener('DOMContentLoaded', () => { initRoom(); });
+</script>
+</body>
+</html>
