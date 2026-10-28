@@ -34,13 +34,38 @@ main {
 .panel.active-turn { border: 2px solid #ffdf76; box-shadow: 0 0 10px #ffdf76; background: rgba(255, 223, 118, 0.1); }
 
 .label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
-.area{ display:flex; justify-content:center; align-items:center; gap:4px; flex-wrap:nowrap; min-height:45px; width:100%; padding:1px; }
 
-#table { background:radial-gradient(ellipse,#18633e,#083824); border:1px double var(--gold); min-height:50px; position:relative; }
-#remaining { position:absolute; top:2px; right:4px; padding:1px 3px; border:1px solid var(--gold); border-radius:3px; background:#042116; color:#ffe7a7; font-size:7px; font-weight:bold; }
+/* TAVOLO A DUE FILE: CARTE GRANDI E ORDINATE */
+.area {
+ display:flex; justify-content:center; align-items:center; gap:4px;
+ flex-wrap:nowrap; min-height:48px; width:100%; padding:2px;
+}
 
+#table {
+ background:radial-gradient(ellipse,#18633e,#083824);
+ border:1px double var(--gold);
+ min-height:75px;
+ position:relative;
+ display:flex;
+ flex-direction:column;
+ justify-content:center;
+ align-items:center;
+ gap:3px;
+}
+
+.table-row {
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ gap: 4px;
+ width: 100%;
+}
+
+#remaining { position:absolute; top:2px; right:4px; padding:1px 3px; border:1px solid var(--gold); border-radius:3px; background:#042116; color:#ffe7a7; font-size:7px; font-weight:bold; z-index:5; }
+
+/* Dimensioni piene e grandi per le carte */
 .card {
- width:clamp(42px, 13vw, 52px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
+ width:clamp(40px, 12vw, 48px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
  background:#fff8e9; border:2px solid #e6d5a7; border-radius:5px; cursor:pointer; transition:transform .15s; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
 .card.selected{transform:translateY(-4px);outline:3px solid #ffe17c;box-shadow:0 0 8px #ffdf76}
@@ -80,19 +105,19 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Punti - G1: 0/11 | G2: 0/11</div>
- <div id="connectionStatus">Partita Pronta (Turni & Spettatori attivi)</div>
+ <div id="connectionStatus">Partita PvP Reale</div>
 </header>
 
 <main>
  <section class="panel" id="opponentPanel">
-  <div id="opponentLabel" class="label">AVVERSARIO</div>
+  <div id="opponentLabel" class="label">AVVERSARIO (IN ATTESA)</div>
   <div id="opponent" class="area"></div>
  </section>
 
  <section class="panel" id="table">
   <div id="remaining">🂠 --</div>
-  <div class="label">✦ TAVOLO DA GIOCO ✦</div>
-  <div id="middle" class="area"></div>
+  <div class="label" style="margin-bottom:0;">✦ TAVOLO DA GIOCO ✦</div>
+  <div id="tableRowsContainer" style="width:100%; display:flex; flex-direction:column; gap:3px;"></div>
  </section>
 
  <section class="panel" id="playerPanel">
@@ -103,7 +128,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   </div>
  </section>
 
- <div id="message" aria-live="polite">Partita pronta! Seleziona una carta rispettando i turni.</div>
+ <div id="message" aria-live="polite">Partita pronta! Seleziona una carta.</div>
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO & SPETTATORI</div>
@@ -123,17 +148,15 @@ try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
 const userName = user ? (user.first_name || 'Giocatore') : 'Giocatore';
-const userId = user ? String(user.id) : 'user_' + Math.floor(Math.random()*1000);
 
-// Gestione Salvataggio Locale (Persistenza progressi senza perdita dati su refresh)
-let savedState = localStorage.getItem('scopa_gamestate_v1');
+let savedState = localStorage.getItem('scopa_real_pvp_v3');
 let gameState = savedState ? JSON.parse(savedState) : {
   board_cards: [],
   player1_hand: [],
   player2_hand: [],
   player1_score: 0,
   player2_score: 0,
-  turn: 'player1', // 'player1' o 'player2'
+  turn: 'player1',
   deck: []
 };
 
@@ -177,43 +200,62 @@ function initGame() {
 }
 
 function saveProgress() {
-  localStorage.setItem('scopa_gamestate_v1', JSON.stringify(gameState));
+  localStorage.setItem('scopa_real_pvp_v3', JSON.stringify(gameState));
 }
 
 function render() {
   const pArea = document.getElementById("player");
-  const mArea = document.getElementById("middle");
+  const tContainer = document.getElementById("tableRowsContainer");
   const oArea = document.getElementById("opponent");
   const pPanel = document.getElementById("playerPanel");
   const oPanel = document.getElementById("opponentPanel");
 
   pArea.replaceChildren();
-  mArea.replaceChildren();
+  tContainer.replaceChildren();
   oArea.replaceChildren();
 
-  // 1. Illuminazione visiva del turno (Punto 2)
   const isMyTurn = (gameState.turn === 'player1');
   if (isMyTurn) {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
     document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (È IL TUO TURNO!) ✦";
+    document.getElementById("opponentLabel").textContent = "AVVERSARIO REALE (IN ATTESA)";
   } else {
     pPanel.classList.remove('active-turn');
     oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI IL TURNO DELL'AVVERSARIO)";
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI TURNO AVVERSARIO)";
+    document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO REALE ✦";
   }
 
-  // Tavolo da gioco (Le carte rimangono sempre visibili e intatte!)
+  // Dividi le carte del tavolo in due file (fino a 5 carte per fila)
   if (gameState.board_cards) {
-    gameState.board_cards.forEach(c => {
+    const row1Cards = gameState.board_cards.slice(0, 5);
+    const row2Cards = gameState.board_cards.slice(5);
+
+    const r1 = document.createElement("div");
+    r1.className = "table-row";
+    row1Cards.forEach(c => {
       const im = document.createElement("img");
       im.className = "card";
       im.src = imageURL(c);
-      mArea.appendChild(im);
+      r1.appendChild(im);
     });
+    tContainer.appendChild(r1);
+
+    if (row2Cards.length > 0) {
+      const r2 = document.createElement("div");
+      r2.className = "table-row";
+      row2Cards.forEach(c => {
+        const im = document.createElement("img");
+        im.className = "card";
+        im.src = imageURL(c);
+        r2.appendChild(im);
+      });
+      tContainer.appendChild(r2);
+    }
   }
 
-  // Mano giocatore 1
+  // Mano giocatore
   if (gameState.player1_hand) {
     gameState.player1_hand.forEach(c => {
       const im = document.createElement("img");
@@ -243,7 +285,6 @@ function render() {
   document.getElementById("play").disabled = !isMyTurn || selectedCardId === null;
 }
 
-// 2. Gestione rigida dei turni uno alla volta (Punto 1)
 function playPlayerCard() {
   if (selectedCardId === null || gameState.turn !== 'player1') return;
   
@@ -254,31 +295,16 @@ function playPlayerCard() {
   gameState.player1_hand = hand.filter(c => c.id !== card.id);
   gameState.board_cards.push(card);
 
-  // 4. Festeggiamento per la Scopa (Punto 4)
   if(gameState.board_cards.length === 1) {
     triggerPartyAnimation();
     gameState.player1_score += 1;
   }
 
   selectedCardId = null;
-  gameState.turn = 'player2'; // Passa il turno all'avversario
-  saveProgress(); // 3. Salvataggio e persistenza progressi (Punto 3)
+  gameState.turn = 'player2'; // Si ferma e aspetta l'avversario reale
+  saveProgress();
   render();
   checkWinCondition();
-
-  // Simulazione mossa automatica dell'avversario dopo 2 secondi (per testare facilmente la turnazione)
-  if (gameState.player2_hand && gameState.player2_hand.length > 0) {
-    setTimeout(() => {
-      if(gameState.turn === 'player2') {
-        const oppCard = gameState.player2_hand.pop();
-        gameState.board_cards.push(oppCard);
-        gameState.turn = 'player1';
-        saveProgress();
-        render();
-        checkWinCondition();
-      }
-    }, 2000);
-  }
 }
 
 function triggerPartyAnimation() {
@@ -287,17 +313,15 @@ function triggerPartyAnimation() {
   setTimeout(() => { overlay.style.display = "none"; }, 2000);
 }
 
-// 5. Chiusura automatica a 11 punti (Punto 5)
 function checkWinCondition() {
   if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
     let winner = gameState.player1_score >= 11 ? 'Giocatore 1' : 'Giocatore 2';
     document.getElementById("message").textContent = `🏆 Partita terminata! Vinto da ${winner}!`;
-    localStorage.removeItem('scopa_gamestate_v1'); // Pulisce a fine partita
+    localStorage.removeItem('scopa_real_pvp_v3');
     setTimeout(() => { try { tg.close(); } catch(e) {} }, 4000);
   }
 }
 
-// 6. Chat e Spettatori (Punto 6)
 function sendChat() {
   const input = document.getElementById("chatInput");
   const val = input.value.trim();
