@@ -20,7 +20,8 @@ header {
 .brand{font-size:7px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
 h1{margin:0;color:var(--gold);font-size:11px;letter-spacing:1px}
 #score{font-size:9px;font-weight:bold;margin:1px 0;color:#ffe7a7}
-#connectionStatus{font-size:8px;color:#f5d58b}
+#roomStatus { font-size: 8px; color: #a3f7bf; margin-bottom: 1px; font-weight: bold; }
+#connectionStatus{font-size:7px;color:#f5d58b}
 
 main {
  flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:2px;
@@ -118,6 +119,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
+ <div id="roomStatus">Posti: G1 [In attesa] | G2 [In attesa]</div>
  <div id="score">Punti - Connessione in corso...</div>
  <div id="connectionStatus">Sincronizzazione online attiva</div>
 </header>
@@ -289,6 +291,11 @@ function render() {
   const currentSpectators = gameState.spectators ? gameState.spectators.length : 0;
   document.getElementById("spectatorCountLabel").textContent = `💬 CHAT DELLA STANZA (Spettatori: ${currentSpectators}/3)`;
 
+  // Aggiornamento barra di stato in alto con i nomi in tempo reale
+  const g1 = gameState.player1_id ? gameState.player1_id : 'In attesa...';
+  const g2 = gameState.player2_id ? gameState.player2_id : 'In attesa...';
+  document.getElementById("roomStatus").textContent = `Posti: G1 [${g1}] | G2 [${g2}]`;
+
   if (isMyTurn && !isSpectator) {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
@@ -366,7 +373,7 @@ function render() {
   document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score} | ${p2Name}: ${gameState.player2_score}`;
   document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 
-  // Chat in tempo reale sincronizzata
+  // Chat
   if (gameState.chat) {
     const log = document.getElementById("chatlog");
     log.replaceChildren();
@@ -428,7 +435,6 @@ async function sendChat() {
   await updateRemoteState();
 }
 
-// Invia premendo INVIO da tastiera
 document.getElementById('chatInput').addEventListener('keypress', function (e) {
   if (e.key === 'Enter') {
     sendChat();
