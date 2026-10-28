@@ -98,45 +98,49 @@ footer{font-size:11px;color:#d4c39c;padding:18px}
  100%{opacity:0;transform:scale(1.1) translateY(-45px)}
 }
 </style>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Telegram WebApp SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <header>
  <div class="brand">MONOPOLYGOITA PRESENTA</div>
- <h1>♠ SCOPA ♣</h1>
- <div style="color:#f9e5b1">Carte napoletane · Sfida contro il computer</div>
- <div id="score">Tu 0 — Computer 0</div>
+ <h1>♠ SCOPA ♣ (Multiplayer)</h1>
+ <div id="connectionStatus" style="color:#f5d58b; font-size:12px; margin-top:4px">Connessione a Supabase in corso...</div>
+ <div style="color:#f9e5b1">Carte napoletane · 1v1 in tempo reale</div>
+ <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
  <div class="scoreline"><div id="progress"></div></div>
  <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
 </header>
 
 <main>
  <section class="panel">
-  <div class="label">AVVERSARIO · COMPUTER</div>
+  <div id="opponentLabel" class="label">AVVERSARIO · IN ATTESA...</div>
   <div id="opponent" class="area"></div>
  </section>
 
  <section class="panel" id="table">
   <div class="label">✦ TAVOLO DA GIOCO ✦</div>
-  <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
+  <div id="remaining">🂠 CARTE NEL MAZZO: --</div>
   <div id="middle" class="area"></div>
  </section>
 
  <section class="panel">
-  <div class="label">LE TUE CARTE</div>
+  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
   <div id="player" class="area"></div>
-  <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
+  <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
  </section>
 
  <div id="message" aria-live="polite"></div>
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO</div>
-  <div id="chatlog" aria-live="polite">Benvenuto al tavolo! Buona partita.</div>
+  <div id="chatlog" aria-live="polite">Connesso al tavolo multiplayer.</div>
   <div class="chatrow">
    <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
    <button onclick="sendChat()">Invia</button>
   </div>
-  <div class="note">Chat locale: i messaggi sono visibili solo su questo dispositivo.</div>
  </section>
 </main>
 
@@ -156,6 +160,37 @@ footer{font-size:11px;color:#d4c39c;padding:18px}
 </div>
 
 <script>
+// ==========================================
+// CONFIGURAZIONE SUPABASE E TELEGRAM
+// ==========================================
+const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const tg = window.Telegram.WebApp;
+tg.expand();
+
+const user = tg.initDataUnsafe?.user;
+const userId = user ? user.id : Math.floor(Math.random() * 1000000);
+const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
+const chatId = tg.initDataUnsafe?.chat?.id || 123456789;
+
+let currentGameId = null;
+let playerRole = null; // 'player1' o 'player2'
+let gameState = {
+  board_cards: [],
+  player1_hand: [],
+  player2_hand: [],
+  deck: [],
+  turn: null,
+  status: 'waiting',
+  player1_id: null,
+  player1_name: 'In attesa...',
+  player2_id: null,
+  player2_name: 'In attesa...'
+};
+let selectedCardId = null;
+
 const suits=["denari","coppe","spade","bastoni"];
 const files=[
 "01 Asso di denari.jpg","02 Due di denari.jpg",
@@ -180,11 +215,6 @@ const files=[
 "39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
 ];
 
-let deck=[],hand=[],cpu=[],table=[],mine=[],theirs=[];
-let selected=null,turn="player",lastTaker=null,finished=false;
-let playerScore=0,cpuScore=0,playerScopes=0,cpuScopes=0;
-let lastRecap=null;
-
 function makeDeck(){
  const d=files.map((file,i)=>({
   id:i+1,rank:i%10+1,suit:suits[Math.floor(i/10)],
@@ -201,377 +231,242 @@ function imageURL(c){
  return "https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(c.file);
 }
 
-function cardImage(c,area){
- const im=document.createElement("img");
- im.className="card"+(area==="player"&&selected===c.id?" selected":"");
- im.src=imageURL(c);
- im.alt=c.file;
- im.loading="lazy";
- im.onerror=()=>{im.style.background="#f2dfb0";};
- if(area==="player"&&turn==="player"&&!finished){
-  im.onclick=()=>{selected=c.id;render();};
- }
- return im;
-}
+// ==========================================
+// INIZIALIZZAZIONE PARTITA MULTIPLAYER
+// ==========================================
+async function initMultiplayer() {
+  document.getElementById("connectionStatus").textContent = "Connessione al tavolo della chat...";
 
-function render(){
- const p=document.getElementById("player");
- const m=document.getElementById("middle");
- const o=document.getElementById("opponent");
- p.replaceChildren();
- m.replaceChildren();
- o.replaceChildren();
+  // Cerca partita in attesa nella chat
+  let { data: games, error } = await supabase
+    .from('games')
+    .select('*')
+    .eq('chat_id', chatId)
+    .eq('status', 'waiting')
+    .limit(1);
 
- hand.forEach(c=>p.appendChild(cardImage(c,"player")));
- table.forEach(c=>m.appendChild(cardImage(c,"table")));
- cpu.forEach(()=>{
-  const b=document.createElement("div");
-  b.className="card back";
-  o.appendChild(b);
- });
+  if (games && games.length > 0) {
+    const game = games[0];
+    if (game.player1_id === userId) {
+      currentGameId = game.id;
+      playerRole = 'player1';
+      document.getElementById("connectionStatus").textContent = "In attesa che un avversario si unisca...";
+    } else {
+      currentGameId = game.id;
+      playerRole = 'player2';
+      
+      // Inizia la partita distribuendo le carte iniziali
+      const deck = makeDeck();
+      const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
+      const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
 
- document.getElementById("score").textContent="Tu "+playerScore+" — Computer "+cpuScore;
- document.getElementById("progress").style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+"%";
- document.getElementById("remaining").textContent="🂠 CARTE NEL MAZZO: "+deck.length;
- document.getElementById("play").disabled=turn!=="player"||finished||selected===null;
-}
+      const { error: updateErr } = await supabase.from('games').update({
+        player2_id: userId,
+        player2_name: userName,
+        status: 'playing',
+        board_cards: board,
+        player1_hand: p1Hand,
+        player2_hand: p2Hand,
+        deck: deck,
+        turn: game.player1_id
+      }).eq('id', currentGameId);
 
-function say(t){
- const el=document.getElementById("message");
- if(t.includes("scegli una carta")||
-    t.includes("Tocca una tua carta")||
-    t.includes("Nuove carte distribuite")||
-    t.includes("Nuova mano!")){
-  el.textContent="";
-  return;
- }
- el.textContent=t;
-}
-
-function startHand(){
- deck=makeDeck();
- hand=[];cpu=[];table=[];mine=[];theirs=[];
- selected=null;lastTaker=null;finished=false;turn="player";
- playerScopes=0;cpuScopes=0;
- document.getElementById("modal").classList.add("hidden");
- for(let i=0;i<4;i++)table.push(deck.pop());
- deal();
- say("Nuova mano!");
-}
-
-function newGame(){
- playerScore=0;cpuScore=0;
- startHand();
-}
-
-function deal(){
- while(hand.length<3&&deck.length)hand.push(deck.pop());
- while(cpu.length<3&&deck.length)cpu.push(deck.pop());
- selected=null;turn="player";
- render();
-}
-
-function combos(cards,target){
- const out=[];
- for(let mask=1;mask<(1<<cards.length);mask++){
-  const group=cards.filter((c,i)=>mask&(1<<i));
-  if(group.reduce((s,c)=>s+c.value,0)===target)out.push(group);
- }
- return out;
-}
-
-function celebrate(){
- const banner=document.getElementById("scopaBanner");
- banner.classList.remove("hidden");
- banner.style.animation="none";
- void banner.offsetWidth;
- banner.style.animation="";
-
- const holder=document.getElementById("confetti");
- holder.replaceChildren();
-
- for(let i=0;i<75;i++){
-  const bit=document.createElement("i");
-  bit.className="confetto";
-  bit.style.left=Math.random()*100+"%";
-  bit.style.background=["#ffe27a","#fff5d6","#e5b34c","#55cf8d","#ed6b68"][i%5];
-  bit.style.animationDelay=Math.random()*.8+"s";
-  bit.style.animationDuration=(1.5+Math.random()*1.5)+"s";
-  holder.appendChild(bit);
- }
-
- setTimeout(()=>{
-  banner.classList.add("hidden");
-  holder.replaceChildren();
- },3000);
-}
-
-function takeCard(card,who){
- const exact=table.find(c=>c.value===card.value);
- let chosen=[];
-
- if(exact){
-  chosen=[exact];
- }else{
-  const options=combos(table,card.value);
-  if(options.length){
-   if(who==="player"&&options.length>1){
-    const labels=options.map((g,i)=>
-     (i+1)+") "+g.map(c=>c.file.replace(/\.jpg$/i,"")).join(" + ")
-    ).join("\n");
-    const answer=prompt("Scegli la presa scrivendo il numero:\n"+labels,"1");
-    if(answer===null)return false;
-    const n=Number(answer);
-    if(!Number.isInteger(n)||n<1||n>options.length){
-     say("Numero non valido. Riprova.");
-     return false;
+      if (updateErr) console.error(updateErr);
+      document.getElementById("connectionStatus").textContent = "Partita avviata con " + game.player1_name + "!";
     }
-    chosen=options[n-1];
-   }else{
-    chosen=options.find(g=>g.length===1)||options[0];
-   }
+  } else {
+    // Crea nuova partita come Giocatore 1
+    const { data: newGame, error: err } = await supabase.from('games').insert([
+      {
+        chat_id: chatId,
+        player1_id: userId,
+        player1_name: userName,
+        status: 'waiting',
+        board_cards: [],
+        player1_hand: [],
+        player2_hand: [],
+        deck: []
+      }
+    ]).select().single();
+
+    if (err) {
+      console.error("Errore creazione partita:", err);
+      return;
+    }
+
+    currentGameId = newGame.id;
+    playerRole = 'player1';
+    document.getElementById("connectionStatus").textContent = "Tavolo creato! In attesa di un secondo giocatore...";
   }
- }
 
- if(chosen.length){
-  const captured=who==="player"?mine:theirs;
-  captured.push(card,...chosen);
-  table=table.filter(c=>!chosen.some(x=>x.id===c.id));
-  lastTaker=who;
+  subscribeRealtime();
+}
 
-  const cardsStillToPlay=hand.length+cpu.length;
-  const canStillPlay=deck.length>0||cardsStillToPlay>1;
+function subscribeRealtime() {
+  supabase
+    .channel('room_' + currentGameId)
+    .on('postgres_changes', { 
+      event: 'UPDATE', 
+      schema: 'public', 
+      table: 'games',
+      filter: `id=eq.${currentGameId}`
+    }, (payload) => {
+      gameState = payload.new;
+      render();
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        // Carica stato attuale fresco
+        const { data } = await supabase.from('games').select('*').eq('id', currentGameId).single();
+        if (data) {
+          gameState = data;
+          render();
+        }
+      }
+    });
+}
 
-  if(table.length===0&&canStillPlay){
-   if(who==="player"){
-    playerScopes++;
-   }else{
-    cpuScopes++;
-   }
-   celebrate();
-   say(who==="player"?"SCOPA! Hai preso tutte le carte!":"Il computer ha fatto SCOPA!");
-  }else{
-   say(who==="player"?"Hai preso le carte.":"Il computer ha preso le carte.");
+// ==========================================
+// RENDER DELLA GRAFICA SUL CLIENT
+// ==========================================
+function render() {
+  const pArea = document.getElementById("player");
+  const mArea = document.getElementById("middle");
+  const oArea = document.getElementById("opponent");
+
+  pArea.replaceChildren();
+  mArea.replaceChildren();
+  oArea.replaceChildren();
+
+  // Etichette ruoli
+  const isP1 = playerRole === 'player1';
+  document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : gameState.player2_name) + ")";
+  document.getElementById("opponentLabel").textContent = "AVVERSARIO · " + (isP1 ? (gameState.player2_name || "In attesa...") : gameState.player1_name);
+
+  // Carte in mano nostra
+  const myHand = isP1 ? gameState.player1_hand : gameState.player2_hand;
+  if (myHand) {
+    myHand.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
+      im.src = imageURL(c);
+      im.alt = c.file;
+      im.onclick = () => {
+        if (gameState.turn === userId && gameState.status === 'playing') {
+          selectedCardId = c.id;
+          render();
+        }
+      };
+      pArea.appendChild(im);
+    });
   }
- }else{
-  table.push(card);
-  say(who==="player"?"Carta calata sul tavolo.":"Il computer ha calato una carta.");
- }
- return true;
-}
 
-function playPlayer(){
- if(turn!=="player"||finished||selected===null)return;
- const card=hand.find(c=>c.id===selected);
- if(!card)return;
- if(!takeCard(card,"player"))return;
-
- hand=hand.filter(c=>c.id!==card.id);
- selected=null;
- render();
-
- if(hand.length===0&&cpu.length===0){
-  afterTurn();
-  return;
- }
- turn="cpu";
- render();
- setTimeout(cpuMove,600);
-}
-
-function cpuMove(){
- if(finished)return;
- if(!cpu.length){
-  afterTurn();
-  return;
- }
- const card=cpu[0];
- if(!takeCard(card,"cpu"))return;
- cpu=cpu.slice(1);
- render();
- afterTurn();
-}
-
-function afterTurn(){
- if(!hand.length&&!cpu.length){
-  if(deck.length){
-   deal();
-   say("Nuove carte distribuite. Tocca a te.");
-  }else{
-   finishHand();
+  // Carte avversario (coperte)
+  const oppHand = isP1 ? gameState.player2_hand : gameState.player1_hand;
+  if (oppHand) {
+    oppHand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
   }
- }else{
-  turn="player";
-  render();
-  say("Tocca a te: scegli una carta e premi Gioca carta.");
- }
+
+  // Carte a terra
+  if (gameState.board_cards) {
+    gameState.board_cards.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card";
+      im.src = imageURL(c);
+      mArea.appendChild(im);
+    });
+  }
+
+  // Info mazzo e turno
+  if (gameState.deck) {
+    document.getElementById("remaining").textContent = "🂠 CARTE NEL MAZZO: " + gameState.deck.length;
+  }
+
+  const myTurn = (gameState.turn === userId && gameState.status === 'playing');
+  document.getElementById("play").disabled = !myTurn || selectedCardId === null;
+
+  if (gameState.status === 'waiting') {
+    say("In attesa che un altro giocatore entri nel gruppo...");
+  } else if (myTurn) {
+    say("È il tuo turno! Seleziona una carta e premi Gioca carta.");
+  } else {
+    say("Turno dell'avversario. Attendi la sua mossa...");
+  }
 }
 
-function primieraValue(c){
- if(c.rank===7)return 21;
- if(c.rank===6)return 18;
- if(c.rank===1)return 16;
- if(c.rank===5)return 15;
- if(c.rank===4)return 14;
- if(c.rank===3)return 13;
- if(c.rank===2)return 12;
- return 10;
+function say(t) {
+  document.getElementById("message").textContent = t;
 }
 
-function primiera(cards){
- const best={denari:0,coppe:0,spade:0,bastoni:0};
- for(const c of cards){
-  best[c.suit]=Math.max(best[c.suit],primieraValue(c));
- }
- if(Object.values(best).some(v=>v===0))return 0;
- return Object.values(best).reduce((a,b)=>a+b,0);
+// ==========================================
+// LOGICA DELLA MOSSA
+// ==========================================
+async function playPlayerCard() {
+  const isP1 = playerRole === 'player1';
+  const myHand = isP1 ? [...gameState.player1_hand] : [...gameState.player2_hand];
+  const card = myHand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  // Rimuovi carta dalla mano
+  const newMyHand = myHand.filter(c => c.id !== card.id);
+  let board = [...gameState.board_cards];
+
+  // Regola semplificata presa Scopa: cerca carta uguale o somma
+  const exactIndex = board.findIndex(c => c.value === card.value);
+  if (exactIndex !== -1) {
+    board.splice(exactIndex, 1); // Prende la carta corrispondente
+    say("Presa effettuata!");
+  } else {
+    board.push(card); // Lascia la carta a terra
+    say("Carta calata sul tavolo.");
+  }
+
+  // Determina prossimo turno
+  const oppId = isP1 ? gameState.player2_id : gameState.player1_id;
+  const nextTurn = oppId;
+
+  // Aggiorna stato su Supabase
+  const updatePayload = isP1 ? {
+    player1_hand: newMyHand,
+    board_cards: board,
+    turn: nextTurn
+  } : {
+    player2_hand: newMyHand,
+    board_cards: board,
+    turn: nextTurn
+  };
+
+  selectedCardId = null;
+
+  const { error } = await supabase.from('games').update(updatePayload).eq('id', currentGameId);
+  if (error) console.error("Errore invio mossa:", error);
 }
 
-function countCoins(cards){
- return cards.filter(c=>c.suit==="denari").length;
+function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+  const log = document.getElementById("chatlog");
+  const line = document.createElement("div");
+  line.textContent = userName + ": " + val;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
 }
 
-function hasSettebello(cards){
- return cards.some(c=>c.suit==="denari"&&c.rank===7);
-}
-
-function handBreakdown(cards,opponent,scopes){
- const rows=[];
- rows.push({
-  name:"Maggior numero di carte",
-  point:cards.length>opponent.length?1:0,
-  detail:cards.length+" carte contro "+opponent.length
- });
- rows.push({
-  name:"Maggior numero di denari",
-  point:countCoins(cards)>countCoins(opponent)?1:0,
-  detail:countCoins(cards)+" denari contro "+countCoins(opponent)
- });
- rows.push({
-  name:"Settebello",
-  point:hasSettebello(cards)?1:0,
-  detail:hasSettebello(cards)?"Sette di denari conquistato":"Non conquistato"
- });
-
- const a=primiera(cards),b=primiera(opponent);
- rows.push({
-  name:"Primiera",
-  point:a>b&&a>0?1:0,
-  detail:a>b&&a>0?"Primiera "+a+" contro "+b:
-         a===b?"Parità ("+a+" a "+b+")":"Primiera "+a+" contro "+b
- });
- rows.push({
-  name:"Scope",
-  point:scopes,
-  detail:scopes+" scope realizzate"
- });
- return rows;
-}
-
-function finishHand(){
- if(lastTaker==="player")mine.push(...table);
- else if(lastTaker==="cpu")theirs.push(...table);
- table=[];
-
- const pRows=handBreakdown(mine,theirs,playerScopes);
- const cRows=handBreakdown(theirs,mine,cpuScopes);
- const p=pRows.reduce((s,r)=>s+r.point,0);
- const c=cRows.reduce((s,r)=>s+r.point,0);
-
- playerScore+=p;
- cpuScore+=c;
- finished=true;
- render();
-
- const gameOver=playerScore>=11||cpuScore>=11;
- const title=gameOver?
-  (playerScore===cpuScore?"Parità!":playerScore>cpuScore?"🏆 Hai vinto la partita!":"Il computer ha vinto la partita"):
-  "Mano terminata!";
-
- showRecap(pRows,cRows,p,c,title,gameOver);
-}
-
-function showRecap(pRows,cRows,p,c,title,gameOver){
- lastRecap={pRows,cRows,p,c,gameOver};
- document.getElementById("modalTitle").textContent=gameOver?"Fine partita":"Riepilogo della mano";
- document.getElementById("resultTitle").textContent=title;
- document.getElementById("recapScore").textContent="Tu "+playerScore+" — Computer "+cpuScore;
-
- const box=document.getElementById("recapRows");
- box.replaceChildren();
-
- const heading=document.createElement("div");
- heading.className="recaprow";
- heading.innerHTML="<strong>Categoria</strong><strong>Tu / Computer</strong>";
- box.appendChild(heading);
-
- for(let i=0;i<pRows.length;i++){
-  const a=pRows[i],b=cRows[i];
-  const row=document.createElement("div");
-  row.className="recaprow";
-
-  const name=document.createElement("span");
-  name.textContent=a.name;
-
-  const points=document.createElement("strong");
-  points.textContent=a.point+" / "+b.point;
-
-  const detail=document.createElement("div");
-  detail.style.cssText="font-size:11px;color:#d9cba9;text-align:left;margin-top:3px;width:100%";
-  detail.textContent="Tu: "+a.detail+" · Computer: "+b.detail;
-
-  const wrap=document.createElement("div");
-  wrap.style.width="100%";
-  wrap.append(name,detail);
-  row.replaceChildren(wrap,points);
-  box.appendChild(row);
- }
-
- const total=document.createElement("div");
- total.className="recaprow";
- total.innerHTML="<strong>Punti della mano</strong><strong>"+p+" / "+c+"</strong>";
- box.appendChild(total);
-
- document.getElementById("continueButton").textContent=gameOver?"Nuova partita":"Continua";
- document.getElementById("modal").classList.remove("hidden");
- say(gameOver?title:"Mano terminata. Controlla il riepilogo dei punti.");
-}
-
-function continueGame(){
- document.getElementById("modal").classList.add("hidden");
- if(lastRecap&&lastRecap.gameOver)newGame();
- else startHand();
-}
-
-function sendChat(){
- const input=document.getElementById("chatInput");
- const value=input.value.trim();
- if(!value)return;
-
- const log=document.getElementById("chatlog");
- if(log.textContent.includes("Benvenuto al tavolo!"))log.replaceChildren();
-
- const line=document.createElement("div");
- line.textContent="Tu: "+value;
- log.appendChild(line);
- log.scrollTop=log.scrollHeight;
- input.value="";
-}
-
-document.getElementById("chatInput").addEventListener("keydown",e=>{
- if(e.key==="Enter")sendChat();
+document.getElementById("chatInput").addEventListener("keydown", e => {
+  if(e.key === "Enter") sendChat();
 });
 
-newGame();
+// Avvio all'apertura
+window.addEventListener('DOMContentLoaded', () => {
+  initMultiplayer();
+});
 </script>
- 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-window.scopaSupabase = window.supabase.createClient(
-  'https://sommziqnmxgkwyjatxcn.supabase.co',
-  'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C'
-);
-</script>
-
 </body>
-</html>g
+</html>
