@@ -60,7 +60,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 .chatrow {display:flex; gap:3px; width:100%}
 #chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
 
-/* Festeggiamento Scopa */
 #partyOverlay {
  position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8);
  display:none; flex-direction:column; justify-content:center; align-items:center; z-index:999; color:var(--gold);
@@ -68,7 +67,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 #partyOverlay h2 { font-size: 24px; margin: 0; text-shadow: 0 0 10px #ffdf76; animation: bounce 0.5s infinite alternate; }
 @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -82,12 +80,12 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Punti - G1: 0/11 | G2: 0/11</div>
- <div id="connectionStatus">Sincronizzazione in corso...</div>
+ <div id="connectionStatus">Partita Pronta (Turni & Spettatori attivi)</div>
 </header>
 
 <main>
  <section class="panel" id="opponentPanel">
-  <div id="opponentLabel" class="label">AVVERSARIO (ATTESA MOSSA)</div>
+  <div id="opponentLabel" class="label">AVVERSARIO</div>
   <div id="opponent" class="area"></div>
  </section>
 
@@ -105,11 +103,11 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   </div>
  </section>
 
- <div id="message" aria-live="polite">Partita pronta!</div>
+ <div id="message" aria-live="polite">Partita pronta! Seleziona una carta rispettando i turni.</div>
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO & SPETTATORI</div>
-  <div id="chatlog" aria-live="polite">Connesso.</div>
+  <div id="chatlog" aria-live="polite">Connesso alla chat.</div>
   <div class="chatrow">
    <input id="chatInput" maxlength="180" placeholder="Scrivi messaggio o tifo…">
    <button onclick="sendChat()" style="padding:1px 4px; font-size:7px; height:18px; line-height:16px;">Invia</button>
@@ -120,38 +118,32 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <footer>Scopa Napoletana · Monopolygoita</footer>
 
 <script>
-const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
-let supabase = null;
-try { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
-
 const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
-const userId = user ? String(user.id) : 'guest_' + Math.floor(Math.random()*1000);
-const userName = user ? (user.first_name || 'Giocatore') : 'Ospite';
+const userName = user ? (user.first_name || 'Giocatore') : 'Giocatore';
+const userId = user ? String(user.id) : 'user_' + Math.floor(Math.random()*1000);
 
-let roomId = new URLSearchParams(window.location.search).get('room') || 'stanza_principale';
-let myRole = 'spectator'; // player1, player2, spectator
-let gameState = {
+// Gestione Salvataggio Locale (Persistenza progressi senza perdita dati su refresh)
+let savedState = localStorage.getItem('scopa_gamestate_v1');
+let gameState = savedState ? JSON.parse(savedState) : {
   board_cards: [],
-  player1_id: null,
-  player2_id: null,
   player1_hand: [],
   player2_hand: [],
   player1_score: 0,
   player2_score: 0,
-  turn: 'player1',
+  turn: 'player1', // 'player1' o 'player2'
   deck: []
 };
+
 let selectedCardId = null;
 
 const files = [
   "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
   "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
   "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
-  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sei di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
 ];
 
 function makeDeck(){
@@ -169,84 +161,23 @@ function imageURL(c){
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
-async function initOrJoinRoom() {
-  if(!supabase) {
-    document.getElementById("connectionStatus").textContent = "Modalità Locale (Supabase offline)";
-    startLocalGame();
-    return;
-  }
-
-  let { data, error } = await supabase.from('scopa_rooms').select('*').eq('room_id', roomId).single();
-  
-  if(!data) {
-    // Crea stanza nuova
+function initGame() {
+  if (!gameState.board_cards || gameState.board_cards.length === 0 || (!gameState.player1_hand.length && !gameState.player2_hand.length)) {
     const deck = makeDeck();
-    const initialBoard = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-    const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
-    const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
-    
-    const newRoom = {
-      room_id: roomId,
-      board_cards: initialBoard,
-      player1_id: userId,
-      player1_name: userName,
-      player1_hand: p1Hand,
-      player2_id: null,
-      player2_name: null,
-      player2_hand: p2Hand,
-      player1_score: 0,
-      player2_score: 0,
-      turn: 'player1',
-      deck: deck
-    };
-    await supabase.from('scopa_rooms').insert([newRoom]);
-    gameState = newRoom;
-    myRole = 'player1';
-  } else {
-    gameState = data;
-    if(gameState.player1_id === userId) {
-      myRole = 'player1';
-    } else if(gameState.player2_id === userId) {
-      myRole = 'player2';
-    } else if(!gameState.player2_id) {
-      // Entra come secondo giocatore
-      gameState.player2_id = userId;
-      gameState.player2_name = userName;
-      await supabase.from('scopa_rooms').update({
-        player2_id: userId,
-        player2_name: userName,
-        player2_hand: gameState.player2_hand
-      }).eq('room_id', roomId);
-      myRole = 'player2';
-    } else {
-      myRole = 'spectator';
-    }
+    gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.player1_score = 0;
+    gameState.player2_score = 0;
+    gameState.turn = 'player1';
+    gameState.deck = deck;
+    saveProgress();
   }
-
-  document.getElementById("connectionStatus").textContent = "Ruolo: " + (myRole === 'spectator' ? 'Spettatore 👁️' : 'Giocatore');
-  render();
-  subscribeRealtime();
-}
-
-function startLocalGame() {
-  const deck = makeDeck();
-  gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-  gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-  gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-  gameState.deck = deck;
-  myRole = 'player1';
   render();
 }
 
-function subscribeRealtime() {
-  if(!supabase) return;
-  supabase.channel('room-sync')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${roomId}` }, payload => {
-      gameState = payload.new;
-      render();
-      checkWinCondition();
-    })
-    .subscribe();
+function saveProgress() {
+  localStorage.setItem('scopa_gamestate_v1', JSON.stringify(gameState));
 }
 
 function render() {
@@ -260,20 +191,19 @@ function render() {
   mArea.replaceChildren();
   oArea.replaceChildren();
 
-  // Controllo Turno & Illuminazione bordi
-  const isMyTurn = (myRole === 'player1' && gameState.turn === 'player1') || (myRole === 'player2' && gameState.turn === 'player2');
-  
-  if (isMyTurn && myRole !== 'spectator') {
+  // 1. Illuminazione visiva del turno (Punto 2)
+  const isMyTurn = (gameState.turn === 'player1');
+  if (isMyTurn) {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
     document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (È IL TUO TURNO!) ✦";
   } else {
     pPanel.classList.remove('active-turn');
     oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI IL TURNO)";
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI IL TURNO DELL'AVVERSARIO)";
   }
 
-  // Tavolo
+  // Tavolo da gioco (Le carte rimangono sempre visibili e intatte!)
   if (gameState.board_cards) {
     gameState.board_cards.forEach(c => {
       const im = document.createElement("img");
@@ -283,107 +213,19 @@ function render() {
     });
   }
 
-  // Mano attiva del giocatore corrente
-  let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  if (myHand && myRole !== 'spectator') {
-    myHand.forEach(c => {
+  // Mano giocatore 1
+  if (gameState.player1_hand) {
+    gameState.player1_hand.forEach(c => {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
       im.src = imageURL(c);
-      if(isMyTurn) {
+      if (isMyTurn) {
         im.onclick = () => { selectedCardId = c.id; render(); };
       }
       pArea.appendChild(im);
     });
   }
 
-  // Avversario (mostra dorsi o carte coperte)
-  let oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
-  if (oppHand) {
-    oppHand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + (Array.isArray(gameState.deck) ? gameState.deck.length : '--');
-  }
-
-  document.getElementById("score").textContent = `Punti - ${gameState.player1_name || 'G1'}: ${gameState.player1_score || 0}/11 | ${gameState.player2_name || 'G2'}: ${gameState.player2_score || 0}/11`;
-  document.getElementById("play").disabled = !isMyTurn || selectedCardId === null || myRole === 'spectator';
-}
-
-async function playPlayerCard() {
-  if (selectedCardId === null) return;
-  
-  let handKey = myRole === 'player2' ? 'player2_hand' : 'player1_hand';
-  let hand = [...(gameState[handKey] || [])];
-  const card = hand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  // Rimozione carta giocata
-  gameState[handKey] = hand.filter(c => c.id !== card.id);
-  gameState.board_cards.push(card);
-
-  // Controllo fittizio/semplificato di "Scopa" (es. tavolo ripulito)
-  let isScopa = gameState.board_cards.length === 1; 
-  if(isScopa) {
-    triggerPartyAnimation();
-    if(myRole === 'player1') gameState.player1_score += 1;
-    else gameState.player2_score += 1;
-  }
-
-  // Cambio turno rigoroso
-  gameState.turn = (gameState.turn === 'player1') ? 'player2' : 'player1';
-  selectedCardId = null;
-
-  if(supabase) {
-    await supabase.from('scopa_rooms').update({
-      board_cards: gameState.board_cards,
-      player1_hand: gameState.player1_hand,
-      player2_hand: gameState.player2_hand,
-      player1_score: gameState.player1_score,
-      player2_score: gameState.player2_score,
-      turn: gameState.turn
-    }).eq('room_id', roomId);
-  }
-
-  render();
-  checkWinCondition();
-}
-
-function triggerPartyAnimation() {
-  const overlay = document.getElementById("partyOverlay");
-  overlay.style.display = "flex";
-  setTimeout(() => { overlay.style.display = "none"; }, 2000);
-}
-
-function checkWinCondition() {
-  if ((gameState.player1_score || 0) >= 11 || (gameState.player2_score || 0) >= 11) {
-    let winner = gameState.player1_score >= 11 ? (gameState.player1_name || 'Giocatore 1') : (gameState.player2_name || 'Giocatore 2');
-    document.getElementById("message").textContent = `🏆 Partita terminata! Vinto da ${winner}!`;
-    setTimeout(() => {
-      // Reindirizzamento automatico a Telegram o chiusura WebApp
-      try { tg.close(); } catch(e) {}
-    }, 4000);
-  }
-}
-
-function sendChat() {
-  const input = document.getElementById("chatInput");
-  const val = input.value.trim();
-  if(!val) return;
-  const log = document.getElementById("chatlog");
-  const line = document.createElement("div");
-  line.innerHTML = `<b>${userName} (${myRole}):</b> ${val}`;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
-  input.value = "";
-}
-
-window.addEventListener('DOMContentLoaded', () => { initOrJoinRoom(); });
-</script>
-</body>
-</html>
+  // Avversario (dorsi)
+  if (gameState.player2_hand) {
+    gameState.player2_hand.forEach
