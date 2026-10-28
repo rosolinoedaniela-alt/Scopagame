@@ -38,12 +38,12 @@ main {
 #remaining { position:absolute; top:2px; right:4px; padding:1px 3px; border:1px solid var(--gold); border-radius:3px; background:#042116; color:#ffe7a7; font-size:7px; font-weight:bold; }
 
 .card {
- width:clamp(44px, 14vw, 56px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
+ width:clamp(42px, 13vw, 52px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
  background:#fff8e9; border:2px solid #e6d5a7; border-radius:5px; cursor:pointer; transition:transform .15s; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
 .card.selected{transform:translateY(-4px);outline:3px solid #ffe17c;box-shadow:0 0 8px #ffdf76}
 .back {
- width:clamp(35px, 11vw, 44px); height:auto; aspect-ratio:1324/2188;
+ width:clamp(34px, 10vw, 42px); height:auto; aspect-ratio:1324/2188;
  background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 8px);
  border:2px double #f2d8a4; border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
@@ -59,7 +59,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 #chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
 footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -105,31 +104,20 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
 <footer>Scopa Napoletana · Monopolygoita</footer>
 
 <script>
-const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
-let supabase = null;
-try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch(e) {}
-
 const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
-const userId = user ? user.id : Math.floor(Math.random() * 1000000);
-const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
+const userName = user ? (user.first_name || 'Giocatore') : 'Giocatore';
 
 let gameState = {
   board_cards: [],
   player1_hand: [],
   player2_hand: [],
-  player1_score: 0,
-  player2_score: 0,
   deck: []
 };
 let selectedCardId = null;
 
-const suits = ["denari", "coppe", "spade", "bastoni"];
 const files = [
   "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
   "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
@@ -138,8 +126,10 @@ const files = [
 ];
 
 function makeDeck(){
- const d = files.map((file,i)=>({
-  id: i+1, rank: (i%10)+1, suit: suits[Math.floor(i/10)], file, value: (i%10)+1
+ const d = files.map((file, i) => ({
+  id: i + 1,
+  rank: (i % 10) + 1,
+  file: file
  }));
  for(let i = d.length - 1; i > 0; i--){
   const j = Math.floor(Math.random() * (i + 1));
@@ -149,7 +139,8 @@ function makeDeck(){
 }
 
 function imageURL(c){
- let fname = (c && c.file) ? c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg") : "01 Asso di denari.jpg";
+ if (!c || !c.file) return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent("01 Asso di denari.jpg");
+ let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg");
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
@@ -171,6 +162,7 @@ function render() {
   mArea.replaceChildren();
   oArea.replaceChildren();
 
+  // Tavolo
   if (gameState.board_cards) {
     gameState.board_cards.forEach(c => {
       const im = document.createElement("img");
@@ -180,6 +172,7 @@ function render() {
     });
   }
 
+  // Mano giocatore
   if (gameState.player1_hand) {
     gameState.player1_hand.forEach(c => {
       const im = document.createElement("img");
@@ -190,6 +183,7 @@ function render() {
     });
   }
 
+  // Avversario (dorsi)
   if (gameState.player2_hand) {
     gameState.player2_hand.forEach(() => {
       const b = document.createElement("div");
