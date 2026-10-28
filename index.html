@@ -73,22 +73,22 @@ main {
  border:2px double #f2d8a4; border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
 
-.action-row { display:flex; align-items:center; gap:4px; width:100%; justify-content:center; margin-top:1px; }
-button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 12px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
+.action-row { display:flex; align-items:center; gap:6px; width:100%; justify-content:center; margin-top:1px; }
+button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 10px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
 button:disabled{opacity:0.4;cursor:not-allowed}
+.btn-share { background:linear-gradient(135deg,#2196F3,#0D47A1); color:#fff; border-color:#90CAF9; }
 
 #chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
 #chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:2px; }
 .chatrow {display:flex; gap:3px; width:100%}
 #chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
 
-#partyOverlay, #winOverlay {
- position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85);
- display:none; flex-direction:column; justify-content:center; align-items:center; z-index:999; color:var(--gold);
+#partyOverlay, #winOverlay, #limitOverlay {
+ position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.88);
+ display:none; flex-direction:column; justify-content:center; align-items:center; z-index:999; color:var(--gold); padding:20px;
 }
-#partyOverlay h2, #winOverlay h2 { font-size: 24px; margin: 0; text-shadow: 0 0 10px #ffdf76; animation: bounce 0.5s infinite alternate; }
+#partyOverlay h2, #winOverlay h2, #limitOverlay h2 { font-size: 22px; margin: 0; text-shadow: 0 0 10px #ffdf76; }
 .win-box { background: rgba(6, 62, 43, 0.95); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
-@keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -100,12 +100,19 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  <p style="font-size:12px; color:#fff;">Grande mossa!</p>
 </div>
 
+<div id="limitOverlay">
+ <div class="win-box">
+  <h2>👁️ STANZA PIENA</h2>
+  <p style="font-size:11px; color:#fff; margin:10px 0;">La stanza ha già raggiunto il limite massimo di <b>3 spettatori</b>.</p>
+  <button onclick="Telegram.WebApp.close()">Chiudi</button>
+ </div>
+</div>
+
 <div id="winOverlay">
  <div class="win-box">
   <h2>🏆 RISULTATO FINALE 🏆</h2>
   <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
   <div id="finalScore" style="font-size:12px; color:var(--gold); margin-bottom:15px;"></div>
-  <p style="font-size:9px; color:#aaa;">Ritorno al gruppo in <span id="countdown">5</span> seconds...</p>
  </div>
 </div>
 
@@ -133,11 +140,12 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
+   <button class="btn-share" onclick="shareSpectatorLink()">👁️ Invita Spettatore</button>
   </div>
  </section>
 
  <section class="panel" id="chat">
-  <div class="label">💬 CHAT DELLA STANZA & SPETTATORI</div>
+  <div class="label" id="spectatorCountLabel">💬 CHAT DELLA STANZA (Spettatori: 0/3)</div>
   <div id="chatlog" aria-live="polite">Connesso alla chat globale.</div>
   <div class="chatrow">
    <input id="chatInput" maxlength="180" placeholder="Scrivi messaggio o tifo…">
@@ -153,7 +161,7 @@ const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
-const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Daniela83Divaa';
+const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Ospite';
 
 const urlParams = new URLSearchParams(window.location.search);
 let isSpectator = urlParams.get('role') === 'spectator';
@@ -166,7 +174,6 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let gameState = null;
 let selectedCardId = null;
-let gameFinished = false;
 
 const files = [
   "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
@@ -190,6 +197,18 @@ function imageURL(c){
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
+// Funzione di condivisione mascherata del link spettatore
+function shareSpectatorLink() {
+  const spectateUrl = "https://rosolinoedaniela-alt.github.io/Scopagame/?role=spectator";
+  const shareText = "👁️ Entra come SPETTATORE alla partita di Scopa!";
+  if (tg.openTelegramLink) {
+    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(spectateUrl)}&text=${encodeURIComponent(shareText)}`);
+  } else {
+    navigator.clipboard.writeText(spectateUrl);
+    alert("Link Spettatore copiato negli appunti!");
+  }
+}
+
 async function initRoom() {
   const { data, error } = await supabaseClient
     .from('scopa_rooms')
@@ -211,14 +230,27 @@ async function initRoom() {
         player2_score: 0,
         turn: 'player1',
         deck: deck,
-        chat: []
+        chat: [],
+        spectators: []
       };
       await supabaseClient.from('scopa_rooms').upsert(newGame);
       gameState = newGame;
     }
   } else {
     gameState = data;
-    if (!isSpectator && !gameState.player2_id && gameState.player1_id !== userName) {
+    if (!gameState.spectators) gameState.spectators = [];
+
+    // Gestione Spettatori e Limite
+    if (isSpectator) {
+      if (!gameState.spectators.includes(userName)) {
+        if (gameState.spectators.length >= 3) {
+          document.getElementById("limitOverlay").style.display = "flex";
+          return;
+        }
+        gameState.spectators.push(userName);
+        await updateRemoteState();
+      }
+    } else if (!gameState.player2_id && gameState.player1_id !== userName) {
       gameState.player2_id = userName;
       await updateRemoteState();
     }
@@ -263,6 +295,10 @@ function render() {
 
   const isMyTurn = gameState.turn === myRole;
 
+  // Aggiorna conteggio spettatori
+  const currentSpectators = gameState.spectators ? gameState.spectators.length : 0;
+  document.getElementById("spectatorCountLabel").textContent = `💬 CHAT DELLA STANZA (Spettatori: ${currentSpectators}/3)`;
+
   if (isMyTurn && !isSpectator) {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
@@ -301,7 +337,7 @@ function render() {
     }
   }
 
-  // Mano del giocatore attivo
+  // Mano del giocatore
   const myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
   if (myHand && !isSpectator) {
     myHand.forEach(c => {
@@ -321,7 +357,7 @@ function render() {
     pArea.appendChild(info);
   }
 
-  // Avversario (dorsi)
+  // Avversario
   const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
   if (oppHand) {
     oppHand.forEach(() => {
@@ -338,7 +374,7 @@ function render() {
   document.getElementById("score").textContent = `Punti - ${gameState.player1_id || 'P1'}: ${gameState.player1_score} | ${gameState.player2_id || 'P2'}: ${gameState.player2_score}`;
   document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 
-  // Aggiorna Chat Log
+  // Chat
   if (gameState.chat) {
     const log = document.getElementById("chatlog");
     log.replaceChildren();
