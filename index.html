@@ -33,13 +33,7 @@ header {
  border:1px solid var(--gold);
  border-radius:6px;
  flex-shrink:0;
- transition: all 0.3s ease;
 }
-header.my-turn {
- border: 2px solid #ffdf76;
- box-shadow: 0 0 10px rgba(255, 223, 118, 0.6);
-}
-
 .brand{font-size:7px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
 h1{margin:0;color:var(--gold);font-size:11px;letter-spacing:1px}
 #score{font-size:9px;font-weight:bold;margin:1px 0;color:#ffe7a7}
@@ -68,6 +62,13 @@ main {
  flex-direction:column;
  justify-content:center;
  align-items:center;
+ transition: all 0.3s ease;
+}
+
+/* ILLUMINAZIONE ROSSA DEL TURNO */
+.panel.active-turn {
+ border: 2px solid #ff4d4d !important;
+ box-shadow: 0 0 10px rgba(255, 77, 77, 0.7);
 }
 
 .label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
@@ -148,6 +149,12 @@ button {
 }
 button:disabled{opacity:0.4;cursor:not-allowed}
 
+#spectateBtn {
+ background: linear-gradient(135deg, #ff9999, #cc0000);
+ color: #fff;
+ border: 1px solid #ff4d4d;
+}
+
 #message{font-size:8px;font-weight:bold;color:#ffe7a7;min-height:10px;margin:0}
 
 #chat {
@@ -187,7 +194,7 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-<header id="mainHeader">
+<header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Giocatore 1: 0 / 11 — Giocatore 2: 0 / 11</div>
@@ -195,7 +202,7 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
 </header>
 
 <main>
- <section class="panel">
+ <section class="panel" id="opponentPanel">
   <div id="opponentLabel" class="label">AVVERSARIO</div>
   <div id="opponent" class="area"></div>
  </section>
@@ -206,12 +213,12 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
   <div id="middle" class="area"></div>
  </section>
 
- <section class="panel">
+ <section class="panel" id="playerPanel">
   <div id="myRoleLabel" class="label">LE TUE CARTE</div>
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button id="spectateBtn" class="hidden" onclick="joinAsSpectator()">👁️ Spettatore</button>
+   <button id="spectateBtn" class="hidden" onclick="joinAsSpectator()">👁️ Entra come Spettatore</button>
   </div>
  </section>
 
@@ -242,8 +249,8 @@ const userId = user ? user.id : Math.floor(Math.random() * 1000000);
 const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
 
-let currentGameId = null;
-let playerRole = 'spectator';
+let currentGameId = localStorage.getItem('scopa_gameId_' + chatId) || null;
+let playerRole = localStorage.getItem('scopa_role_' + chatId) || 'spectator';
 let gameState = {
   board_cards: [],
   player1_hand: [],
@@ -300,13 +307,12 @@ async function initMultiplayer() {
     currentGameId = game.id;
     gameState = game;
 
+    // Riconoscimento persistente tramite salvataggio locale
     if (game.player1_id === userId) {
       playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "Sei il Giocatore 1";
     } else if (game.player2_id === userId) {
       playerRole = 'player2';
-      document.getElementById("connectionStatus").textContent = "Sei il Giocatore 2";
-    } else if (!game.player2_id || game.status === 'waiting') {
+    } else if (playerRole !== 'spectator' && (!game.player2_id || game.status === 'waiting')) {
       playerRole = 'player2';
       const deck = game.deck && game.deck.length > 0 ? game.deck : makeDeck();
       const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
@@ -326,12 +332,12 @@ async function initMultiplayer() {
 
       await supabase.from('games').update(updateData).eq('id', currentGameId);
       Object.assign(gameState, updateData);
-      document.getElementById("connectionStatus").textContent = "Partita iniziata!";
     } else {
+      // Tavolo pieno: mostra il tasto per entrare come spettatore
       document.getElementById("spectateBtn").classList.remove("hidden");
-      document.getElementById("connectionStatus").textContent = "Tavolo occupato. Spettatore disponibile.";
     }
   } else {
+    // Crea nuova stanza se non esiste
     const deck = makeDeck();
     const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
     const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
@@ -358,8 +364,13 @@ async function initMultiplayer() {
       currentGameId = newGame.id;
       gameState = newGame;
       playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "Tavolo creato. In attesa del G2...";
     }
+  }
+
+  // Salva stato in locale per la persistenza all'uscita/rientro
+  if (currentGameId) {
+    localStorage.setItem('scopa_gameId_' + chatId, currentGameId);
+    localStorage.setItem('scopa_role_' + chatId, playerRole);
   }
 
   render();
@@ -368,6 +379,7 @@ async function initMultiplayer() {
 
 function joinAsSpectator() {
   playerRole = 'spectator';
+  localStorage.setItem('scopa_role_' + chatId, 'spectator');
   document.getElementById("spectateBtn").classList.add("hidden");
   document.getElementById("connectionStatus").textContent = "👁️ Entrato come Spettatore";
   render();
@@ -388,7 +400,8 @@ function render() {
   const pArea = document.getElementById("player");
   const mArea = document.getElementById("middle");
   const oArea = document.getElementById("opponent");
-  const headerEl = document.getElementById("mainHeader");
+  const playerPanel = document.getElementById("playerPanel");
+  const opponentPanel = document.getElementById("opponentPanel");
 
   pArea.replaceChildren();
   mArea.replaceChildren();
@@ -397,10 +410,18 @@ function render() {
   const isP1 = (playerRole === 'player1');
   const myTurn = (gameState.turn === userId && gameState.status === 'playing' && playerRole !== 'spectator');
 
-  if (myTurn) {
-    headerEl.classList.add("my-turn");
+  // Gestione illuminazione rossa dei turni
+  if (playerRole !== 'spectator') {
+    if (myTurn) {
+      playerPanel.classList.add("active-turn");
+      opponentPanel.classList.remove("active-turn");
+    } else {
+      playerPanel.classList.remove("active-turn");
+      opponentPanel.classList.add("active-turn");
+    }
   } else {
-    headerEl.classList.remove("my-turn");
+    playerPanel.classList.remove("active-turn");
+    opponentPanel.classList.remove("active-turn");
   }
 
   document.getElementById("score").textContent = 
@@ -409,9 +430,11 @@ function render() {
   if (playerRole === 'spectator') {
     document.getElementById("myRoleLabel").textContent = "CARTE " + (gameState.player1_name || "G1");
     document.getElementById("opponentLabel").textContent = "CARTE " + (gameState.player2_name || "G2");
+    document.getElementById("connectionStatus").textContent = "👁️ Modalità Spettatore";
   } else {
     document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : gameState.player2_name) + ")";
     document.getElementById("opponentLabel").textContent = "AVVERSARIO · " + (isP1 ? (gameState.player2_name || "In attesa...") : gameState.player1_name);
+    document.getElementById("connectionStatus").textContent = isP1 ? "Sei il Giocatore 1" : "Sei il Giocatore 2";
   }
 
   const myHand = (playerRole === 'spectator' || isP1) ? gameState.player1_hand : gameState.player2_hand;
@@ -456,13 +479,13 @@ function render() {
   document.getElementById("play").disabled = !myTurn || selectedCardId === null;
 
   if (gameState.status === 'waiting') {
-    document.getElementById("message").textContent = "In attesa del Giocatore 2 nel gruppo...";
+    document.getElementById("message").textContent = "In attesa del Giocatore 2 nel gruppo... (Condividi il link nel gruppo!)";
   } else if (playerRole === 'spectator') {
     document.getElementById("message").textContent = "👁️ Stai assistendo alla partita in diretta.";
   } else if (myTurn) {
-    document.getElementById("message").textContent = "Tocca una carta e premi gioca!";
+    document.getElementById("message").textContent = "Tocca una carta e premi gioca! (Tuo turno)";
   } else {
-    document.getElementById("message").textContent = "Turno dell'avversario in corso (bloccato).";
+    document.getElementById("message").textContent = "Turno dell'avversario in corso...";
   }
 }
 
