@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+x<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -103,8 +103,8 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="score">Punti - G1: 0/11 | G2: 0/11</div>
- <div id="connectionStatus">Connessione in tempo reale...</div>
+ <div id="score">Punti - In attesa...</div>
+ <div id="connectionStatus">Sincronizzazione in tempo reale...</div>
 </header>
 
 <main>
@@ -120,7 +120,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  </section>
 
  <section class="panel" id="playerPanel">
-  <div id="myRoleLabel" class="label">LE TUE CARTE (IL TUO TURNO)</div>
+  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
@@ -152,9 +152,12 @@ try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
 const userId = user ? String(user.id) : 'guest_' + Math.floor(Math.random()*1000);
-const userName = user ? (user.first_name || 'Giocatore') : 'Ospite';
+const userName = user ? (user.first_name || user.username || 'Giocatore') : 'Ospite';
 
-let roomId = new URLSearchParams(window.location.search).get('room') || 'stanza_principale';
+const urlParams = new URLSearchParams(window.location.search);
+let roomId = urlParams.get('room') || 'stanza_principale';
+let forceSpectator = urlParams.get('role') === 'spectator';
+
 let myRole = 'spectator';
 let gameState = {
   board_cards: [],
@@ -214,7 +217,7 @@ async function initOrJoinRoom() {
       player1_name: userName,
       player1_hand: p1Hand,
       player2_id: null,
-      player2_name: null,
+      player2_name: 'In attesa...',
       player2_hand: p2Hand,
       player1_score: 0,
       player2_score: 0,
@@ -223,13 +226,24 @@ async function initOrJoinRoom() {
     };
     await supabase.from('scopa_rooms').insert([newRoom]);
     gameState = newRoom;
-    myRole = 'player1';
+    myRole = forceSpectator ? 'spectator' : 'player1';
   } else {
     gameState = data;
-    if(gameState.player1_id === userId) {
+    if(forceSpectator) {
+      myRole = 'spectator';
+    } else if(gameState.player1_id === userId) {
       myRole = 'player1';
+      // Aggiorna eventuale cambio nome
+      if(gameState.player1_name !== userName) {
+        gameState.player1_name = userName;
+        await supabase.from('scopa_rooms').update({ player1_name: userName }).eq('room_id', roomId);
+      }
     } else if(gameState.player2_id === userId) {
       myRole = 'player2';
+      if(gameState.player2_name !== userName) {
+        gameState.player2_name = userName;
+        await supabase.from('scopa_rooms').update({ player2_name: userName }).eq('room_id', roomId);
+      }
     } else if(!gameState.player2_id) {
       gameState.player2_id = userId;
       gameState.player2_name = userName;
@@ -237,14 +251,14 @@ async function initOrJoinRoom() {
         player2_id: userId,
         player2_name: userName
       }).eq('room_id', roomId);
-      gameState.player2_name = userName;
       myRole = 'player2';
     } else {
       myRole = 'spectator';
     }
   }
 
-  document.getElementById("connectionStatus").textContent = "Connesso · Ruolo: " + (myRole === 'spectator' ? 'Spettatore 👁️' : (myRole === 'player1' ? 'Giocatore 1 (Tu)' : 'Giocatore 2 (Tu)'));
+  let roleText = myRole === 'spectator' ? 'Spettatore 👁️' : (myRole === 'player1' ? gameState.player1_name : gameState.player2_name);
+  document.getElementById("connectionStatus").textContent = "Connesso · Sei: " + roleText;
   render();
   subscribeRealtime();
 }
@@ -271,18 +285,21 @@ function render() {
   tContainer.replaceChildren();
   oArea.replaceChildren();
 
+  const p1Name = gameState.player1_name || 'Giocatore 1';
+  const p2Name = gameState.player2_name || 'Giocatore 2';
+
   const isMyTurn = (myRole === 'player1' && gameState.turn === 'player1') || (myRole === 'player2' && gameState.turn === 'player2');
   
   if (isMyTurn && myRole !== 'spectator') {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
-    document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (È IL TUO TURNO!) ✦";
-    document.getElementById("opponentLabel").textContent = "AVVERSARIO (" + (myRole === 'player1' ? (gameState.player2_name || 'In attesa...') : (gameState.player1_name || 'In attesa...')) + ")";
+    document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (" + userName + " - È IL TUO TURNO!) ✦";
+    document.getElementById("opponentLabel").textContent = "AVVERSARIO: " + (myRole === 'player1' ? p2Name : p1Name);
   } else {
     pPanel.classList.remove('active-turn');
     oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI IL TURNO)";
-    document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO ✦";
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + userName + " - ATTENDI)";
+    document.getElementById("opponentLabel").textContent = "✦ TURNO DI: " + (gameState.turn === 'player1' ? p1Name : p2Name) + " ✦";
   }
 
   // Tavolo a due file
@@ -313,7 +330,7 @@ function render() {
     }
   }
 
-  // Mano del giocatore corrente (basata sul ruolo reale)
+  // Mano del giocatore corrente
   let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
   if (myHand && myRole !== 'spectator') {
     myHand.forEach(c => {
@@ -325,6 +342,12 @@ function render() {
       }
       pArea.appendChild(im);
     });
+  } else if (myRole === 'spectator') {
+    const info = document.createElement("div");
+    info.style.fontSize = "8px";
+    info.style.color = "#ffe7a7";
+    info.textContent = "Modalità Spettatore: Stai guardando la partita in tempo reale.";
+    pArea.appendChild(info);
   }
 
   // Avversario (dorsi)
@@ -341,12 +364,12 @@ function render() {
     document.getElementById("remaining").textContent = "🂠 " + (Array.isArray(gameState.deck) ? gameState.deck.length : '--');
   }
 
-  document.getElementById("score").textContent = `Punti - ${gameState.player1_name || 'G1'}: ${gameState.player1_score || 0}/11 | ${gameState.player2_name || 'G2'}: ${gameState.player2_score || 0}/11`;
+  document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score || 0}/11 | ${p2Name}: ${gameState.player2_score || 0}/11`;
   document.getElementById("play").disabled = !isMyTurn || selectedCardId === null || myRole === 'spectator';
 }
 
 async function playPlayerCard() {
-  if (selectedCardId === null) return;
+  if (selectedCardId === null || myRole === 'spectator') return;
   
   let handKey = myRole === 'player2' ? 'player2_hand' : 'player1_hand';
   let hand = [...(gameState[handKey] || [])];
@@ -389,7 +412,7 @@ function triggerPartyAnimation() {
 
 function checkWinCondition() {
   if ((gameState.player1_score || 0) >= 11 || (gameState.player2_score || 0) >= 11) {
-    let winner = gameState.player1_score >= 11 ? (gameState.player1_name || 'Giocatore 1') : (gameState.player2_name || 'Giocatore 2');
+    let winner = gameState.player1_score >= 11 ? gameState.player1_name : gameState.player2_name;
     document.getElementById("message").textContent = `🏆 Partita terminata! Vinto da ${winner}!`;
     setTimeout(() => { try { tg.close(); } catch(e) {} }, 4000);
   }
@@ -401,7 +424,7 @@ function sendChat() {
   if(!val) return;
   const log = document.getElementById("chatlog");
   const line = document.createElement("div");
-  line.innerHTML = `<b>${userName}:</b> ${val}`;
+  line.innerHTML = `<b>${userName} (${myRole === 'spectator' ? 'Spettatore' : 'Giocatore'}):</b> ${val}`;
   log.appendChild(line);
   log.scrollTop = log.scrollHeight;
   input.value = "";
