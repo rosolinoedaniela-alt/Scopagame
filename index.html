@@ -31,7 +31,6 @@ main {
  background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(0,0,0,0.2));
  display:flex; flex-direction:column; justify-content:center; align-items:center; transition:all 0.3s ease;
 }
-.panel.active-turn { border:2px solid #ff4d4d !important; box-shadow:0 0 10px rgba(255, 77, 77, 0.7); }
 .label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
 .area{ display:flex; justify-content:center; align-items:center; gap:4px; flex-wrap:nowrap; min-height:45px; width:100%; padding:1px; }
 
@@ -68,7 +67,7 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Giocatore 1: 0 / 11 — Giocatore 2: 0 / 11</div>
- <div id="connectionStatus">Connessione in corso…</div>
+ <div id="connectionStatus">Tavolo pronto</div>
 </header>
 
 <main>
@@ -91,7 +90,7 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
   </div>
  </section>
 
- <div id="message" aria-live="polite">Caricamento tavolo…</div>
+ <div id="message" aria-live="polite">Partita pronta! Seleziona una carta.</div>
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO</div>
@@ -108,7 +107,10 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
 <script>
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(e) {}
 
 const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
@@ -117,14 +119,14 @@ const user = tg.initDataUnsafe?.user;
 const userId = user ? user.id : Math.floor(Math.random() * 1000000);
 const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 
-// Parametri URL per match e ruolo spettatore
-const urlParams = new URLSearchParams(window.location.search);
-const matchRoomId = urlParams.get('room') || 'default_room';
-const isSpectatorMode = urlParams.get('mode') === 'spectator';
-
-let currentGameId = null;
-let myRole = 'spectator'; // 'player1', 'player2', 'spectator'
-let gameState = null;
+let gameState = {
+  board_cards: [],
+  player1_hand: [],
+  player2_hand: [],
+  player1_score: 0,
+  player2_score: 0,
+  deck: []
+};
 let selectedCardId = null;
 
 const suits = ["denari", "coppe", "spade", "bastoni"];
@@ -137,10 +139,10 @@ const files = [
 
 function makeDeck(){
  const d = files.map((file,i)=>({
-  id:i+1, rank:(i%10)+1, suit:suits[Math.floor(i/10)], file, value:(i%10)+1
+  id: i+1, rank: (i%10)+1, suit: suits[Math.floor(i/10)], file, value: (i%10)+1
  }));
- for(let i=d.length-1; i>0; i--){
-  const j = Math.floor(Math.random()*(i+1));
+ for(let i = d.length - 1; i > 0; i--){
+  const j = Math.floor(Math.random() * (i + 1));
   [d[i], d[j]] = [d[j], d[i]];
  }
  return d;
@@ -151,93 +153,16 @@ function imageURL(c){
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
-async function initGame() {
-  document.getElementById("connectionStatus").textContent = "Ricerca partita…";
-  
-  let { data: games } = await supabase.from('games').select('*').eq('room_id', matchRoomId).neq('status', 'finished').limit(1);
-
-  if (games && games.length > 0) {
-    gameState = games[0];
-    currentGameId = gameState.id;
-
-    // Assegna ruoli
-    if (gameState.player1_id === userId) {
-      myRole = 'player1';
-    } else if (gameState.player2_id === userId) {
-      myRole = 'player2';
-    } else if (!gameState.player2_id && !isSpectatorMode) {
-      myRole = 'player2';
-      gameState.player2_id = userId;
-      gameState.player2_name = userName;
-      await supabase.from('games').update({ player2_id: userId, player2_name: userName }).eq('id', currentGameId);
-    } else {
-      myRole = 'spectator';
-    }
-  } else {
-    // Se la stanza non esiste e non siamo spettatori, creala (Player 1)
-    if (!isSpectatorMode) {
-      myRole = 'player1';
-      const deck = makeDeck();
-      const newRecord = {
-        room_id: matchRoomId,
-        player1_id: userId,
-        player1_name: userName,
-        player2_id: null,
-        player2_name: 'In attesa…',
-        player1_score: 0,
-        player2_score: 0,
-        status: 'playing',
-        board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
-        player1_hand: [deck.pop(), deck.pop(), deck.pop()],
-        player2_hand: [deck.pop(), deck.pop(), deck.pop()],
-        deck: deck,
-        turn: userId // Player 1 inizia per primo
-      };
-      const { data: newGame } = await supabase.from('games').insert([newRecord]).select().single();
-      if (newGame) {
-        gameState = newGame;
-        currentGameId = newGame.id;
-      }
-    } else {
-      document.getElementById("message").textContent = "Nessuna partita attiva da osservare.";
-      return;
-    }
-  }
-
-  document.getElementById("connectionStatus").textContent = "Tavolo Sincronizzato";
+function initGame() {
+  const deck = makeDeck();
+  gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+  gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+  gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+  gameState.deck = deck;
   render();
-  subscribeRealtime();
-}
-
-function subscribeRealtime() {
-  if (!currentGameId) return;
-  
-  // Sincronizzazione in Tempo Reale
-  supabase.channel('room_' + currentGameId)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${currentGameId}` }, (payload) => {
-      gameState = payload.new;
-      render();
-    })
-    .subscribe();
 }
 
 function render() {
-  if (!gameState) return;
-
-  // Visualizzazione Punteggio
-  const p1Name = gameState.player1_name || 'G1';
-  const p2Name = gameState.player2_name || 'G2';
-  document.getElementById("score").textContent = `${p1Name}: ${gameState.player1_score || 0} / 11 — ${p2Name}: ${gameState.player2_score || 0} / 11`;
-
-  // Controllo Vincitore (Termine a 11 punti)
-  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
-    const winner = gameState.player1_score >= 11 ? p1Name : p2Name;
-    document.getElementById("message").textContent = `🎉 Vittoria per ${winner}! Chiusura tavolo…`;
-    setTimeout(() => { if (tg.close) tg.close(); }, 4000);
-    return;
-  }
-
-  const isMyTurn = gameState.turn === userId;
   const pArea = document.getElementById("player");
   const mArea = document.getElementById("middle");
   const oArea = document.getElementById("opponent");
@@ -246,7 +171,6 @@ function render() {
   mArea.replaceChildren();
   oArea.replaceChildren();
 
-  // Carte sul tavolo da gioco
   if (gameState.board_cards) {
     gameState.board_cards.forEach(c => {
       const im = document.createElement("img");
@@ -256,96 +180,41 @@ function render() {
     });
   }
 
-  // Identificazione Mano
-  let myHand = [];
-  let oppHandCount = 0;
-
-  if (myRole === 'player1') {
-    myHand = gameState.player1_hand || [];
-    oppHandCount = (gameState.player2_hand || []).length;
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (GIOCATORE 1)";
-    document.getElementById("opponentLabel").textContent = p2Name.toUpperCase();
-  } else if (myRole === 'player2') {
-    myHand = gameState.player2_hand || [];
-    oppHandCount = (gameState.player1_hand || []).length;
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (GIOCATORE 2)";
-    document.getElementById("opponentLabel").textContent = p1Name.toUpperCase();
-  } else {
-    // Modalità Spettatore
-    document.getElementById("myRoleLabel").textContent = p1Name.toUpperCase() + " (SPETTATORE)";
-    document.getElementById("opponentLabel").textContent = p2Name.toUpperCase();
-    myHand = gameState.player1_hand || [];
-    oppHandCount = (gameState.player2_hand || []).length;
+  if (gameState.player1_hand) {
+    gameState.player1_hand.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
+      im.src = imageURL(c);
+      im.onclick = () => { selectedCardId = c.id; render(); };
+      pArea.appendChild(im);
+    });
   }
 
-  // Rendering mie carte
-  myHand.forEach(c => {
-    const im = document.createElement("img");
-    im.className = "card" + (selectedCardId === c.id ? " selected" : "");
-    im.src = imageURL(c);
-    if (myRole !== 'spectator' && isMyTurn) {
-      im.onclick = () => { selectedCardId = c.id; render(); };
-    }
-    pArea.appendChild(im);
-  });
-
-  // Rendering carte avversario (dorsi)
-  for (let i = 0; i < oppHandCount; i++) {
-    const b = document.createElement("div");
-    b.className = "card back";
-    oArea.appendChild(b);
+  if (gameState.player2_hand) {
+    gameState.player2_hand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
   }
 
   if (gameState.deck) {
     document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
   }
 
-  // Gestione stato del turno
-  const playBtn = document.getElementById("play");
-  if (myRole === 'spectator') {
-    playBtn.style.display = 'none';
-    document.getElementById("message").textContent = `👀 Stai osservando la partita. Turno di: ${gameState.turn === gameState.player1_id ? p1Name : p2Name}`;
-  } else if (isMyTurn) {
-    playBtn.style.display = 'inline-block';
-    playBtn.disabled = selectedCardId === null;
-    document.getElementById("message").textContent = "🟢 È il tuo turno! Seleziona una carta e giocala.";
-  } else {
-    playBtn.style.display = 'inline-block';
-    playBtn.disabled = true;
-    document.getElementById("message").textContent = "⏳ Attendi la mossa dell'avversario in tempo reale…";
-  }
+  document.getElementById("play").disabled = selectedCardId === null;
 }
 
-async function playPlayerCard() {
-  if (selectedCardId === null || !gameState) return;
-  
-  const isP1 = myRole === 'player1';
-  let hand = isP1 ? [...gameState.player1_hand] : [...gameState.player2_hand];
+function playPlayerCard() {
+  if (selectedCardId === null) return;
+  const hand = [...(gameState.player1_hand || [])];
   const card = hand.find(c => c.id === selectedCardId);
   if (!card) return;
 
-  // Rimuovi la carta giocata dalla mano e mettila sul tavolo
-  hand = hand.filter(c => c.id !== card.id);
-  const updatedBoard = [...gameState.board_cards, card];
-
-  // Cambia turno all'altro giocatore
-  const nextTurn = isP1 ? gameState.player2_id : gameState.player1_id;
-
+  gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  gameState.board_cards.push(card);
   selectedCardId = null;
-
-  // Aggiornamento sul Database Supabase per la sincronizzazione immediata
-  const updatePayload = {
-    board_cards: updatedBoard,
-    turn: nextTurn
-  };
-
-  if (isP1) {
-    updatePayload.player1_hand = hand;
-  } else {
-    updatePayload.player2_hand = hand;
-  }
-
-  await supabase.from('games').update(updatePayload).eq('id', currentGameId);
+  render();
 }
 
 function sendChat() {
