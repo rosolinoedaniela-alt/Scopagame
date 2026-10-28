@@ -3,562 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Scopa Monopolygoita</title>
+<title>Scopa Debug</title>
 <style>
 *{box-sizing:border-box}
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
 html, body {
- margin:0;
- padding:0;
- width:100%;
- height:100vh;
- height:100dvh;
- overflow:hidden !important;
- background:radial-gradient(ellipse at top,#1b5e3f,#04150e 85%);
- color:var(--cream);
- font-family:Arial,sans-serif;
- text-align:center;
+ margin:0; padding:0; width:100%; height:100vh; height:100dvh;
+ overflow:hidden !important; background:#04150e; color:var(--cream);
+ font-family:Arial,sans-serif; text-align:center; display:flex; flex-direction:column; justify-content:space-between; padding:4px;
 }
-
-body {
- display:flex;
- flex-direction:column;
- justify-content:space-between;
- padding:2px 4px;
-}
-
-header {
- padding:2px 6px;
- background:linear-gradient(135deg,#062b1e,#134e32,#062b1e);
- border:1px solid var(--gold);
- border-radius:6px;
- flex-shrink:0;
-}
-.brand{font-size:7px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
-h1{margin:0;color:var(--gold);font-size:11px;letter-spacing:1px}
-#score{font-size:9px;font-weight:bold;margin:1px 0;color:#ffe7a7}
-#connectionStatus{font-size:8px;color:#f5d58b}
-
-main {
- flex:1;
- display:flex;
- flex-direction:column;
- justify-content:space-between;
- gap:2px;
- max-width:480px;
- margin:0 auto;
- width:100%;
- padding:1px 0;
- min-height:0;
-}
-
-.panel {
- margin:0;
- padding:2px 4px;
- border:1px solid #f5d58b55;
- border-radius:6px;
- background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(0,0,0,0.2));
- display:flex;
- flex-direction:column;
- justify-content:center;
- align-items:center;
- transition: all 0.3s ease;
-}
-
-.panel.active-turn {
- border: 2px solid #ff4d4d !important;
- box-shadow: 0 0 10px rgba(255, 77, 77, 0.7);
-}
-
-.label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
-
-.area{
- display:flex;
- justify-content:center;
- align-items:center;
- gap:4px;
- flex-wrap:nowrap;
- min-height:45px;
- width:100%;
- padding:1px;
-}
-
-#table {
- background:radial-gradient(ellipse,#18633e,#083824);
- border:1px double var(--gold);
- min-height:50px;
- position:relative;
-}
-
-#remaining {
- position:absolute;
- top:2px;
- right:4px;
- padding:1px 3px;
- border:1px solid var(--gold);
- border-radius:3px;
- background:#042116;
- color:#ffe7a7;
- font-size:7px;
- font-weight:bold;
-}
-
-.card {
- width:clamp(44px, 14vw, 56px);
- height:auto;
- aspect-ratio:1324/2188;
- object-fit:contain;
- background:#fff8e9;
- border:2px solid #e6d5a7;
- border-radius:5px;
- cursor:pointer;
- transition:transform .15s;
- box-shadow:0 2px 4px rgba(0,0,0,0.3);
-}
-.card.selected{transform:translateY(-4px);outline:3px solid #ffe17c;box-shadow:0 0 8px #ffdf76}
-
-.back {
- width:clamp(35px, 11vw, 44px);
- height:auto;
- aspect-ratio:1324/2188;
- background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 8px);
- border:2px double #f2d8a4;
- border-radius:5px;
- box-shadow:0 2px 4px rgba(0,0,0,0.3);
-}
-
-.action-row {
- display:flex;
- align-items:center;
- gap:4px;
- width:100%;
- justify-content:center;
- margin-top:1px;
-}
-
-button {
- border:1px solid #ffe3a0;
- border-radius:4px;
- padding:2px 8px;
- background:linear-gradient(135deg,#ffe6a0,#bd8e35);
- color:#122a1b;
- font-weight:bold;
- font-size:9px;
- cursor:pointer;
-}
-button:disabled{opacity:0.4;cursor:not-allowed}
-
-#spectateBtn {
- background: linear-gradient(135deg, #ff9999, #cc0000);
- color: #fff;
- border: 1px solid #ff4d4d;
-}
-
-#message{font-size:8px;font-weight:bold;color:#ffe7a7;min-height:10px;margin:0}
-
-#chat {
- padding:2px 4px;
- flex-shrink:0;
- margin-bottom:2px;
-}
-#chatlog {
- height:22px;
- overflow-y:auto;
- background:rgba(2, 24, 15, 0.9);
- border:1px solid #f5d58b33;
- border-radius:4px;
- padding:1px 4px;
- font-size:7px;
- width:100%;
- text-align:left;
- margin-bottom:2px;
-}
-.chatrow {display:flex; gap:3px; width:100%}
-#chatInput {
- flex:1;
- border-radius:3px;
- padding:2px 4px;
- border:1px solid var(--gold);
- font-size:8px;
- background:#fff;
- color:#000;
- height:18px;
-}
-
-footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
-.hidden{display:none!important}
+header { padding:4px; background:#062b1e; border:1px solid var(--gold); border-radius:6px; flex-shrink:0; }
+h1{margin:0;color:var(--gold);font-size:12px}
+main { flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:4px; max-width:480px; margin:0 auto; width:100%; }
+.panel { padding:4px; border:1px solid var(--gold); border-radius:6px; background:rgba(0,0,0,0.3); display:flex; flex-direction:column; align-items:center; }
+.label{font-size:8px;color:var(--gold);font-weight:bold;margin-bottom:2px;text-transform:uppercase}
+.area{ display:flex; justify-content:center; align-items:center; gap:4px; min-height:50px; width:100%; }
+.card { width:50px; height:75px; background:#fff8e9; border:2px solid #e6d5a7; border-radius:5px; object-fit:contain; }
+#debugLog { background:#000; color:#0f0; font-size:8px; text-align:left; padding:4px; height:45px; overflow-y:auto; border:1px solid #0f0; border-radius:4px; width:100%; font-family:monospace; }
 </style>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <header>
- <div class="brand">Dany presenta</div>
- <h1>Scopa di Monopolygoita</h1>
- <div id="score">Giocatore 1: 0 / 11 — Giocatore 2: 0 / 11</div>
- <div id="connectionStatus">Connessione al tavolo...</div>
+ <h1>Scopa - Modalità Diagnostica</h1>
+ <div id="status" style="font-size:9px;color:#ff4d4d;">Avvio in corso...</div>
 </header>
 
 <main>
- <section class="panel" id="opponentPanel">
-  <div id="opponentLabel" class="label">AVVERSARIO</div>
-  <div id="opponent" class="area"></div>
- </section>
-
- <section class="panel" id="table">
-  <div id="remaining">🂠 --</div>
-  <div class="label">✦ TAVOLO DA GIOCO ✦</div>
+ <div class="panel">
+  <div class="label">Tavolo da Gioco</div>
   <div id="middle" class="area"></div>
- </section>
+ </div>
 
- <section class="panel" id="playerPanel">
-  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
+ <div class="panel">
+  <div class="label">Le tue carte</div>
   <div id="player" class="area"></div>
-  <div class="action-row">
-   <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button id="spectateBtn" class="hidden" onclick="joinAsSpectator()">👁️ Entra come Spettatore</button>
-  </div>
- </section>
+ </div>
 
- <div id="message" aria-live="polite">Connessione in corso...</div>
-
- <section class="panel" id="chat">
-  <div class="label">💬 CHAT DEL TAVOLO</div>
-  <div id="chatlog" aria-live="polite">Connesso al tavolo.</div>
-  <div class="chatrow">
-   <input id="chatInput" maxlength="180" placeholder="Messaggio…">
-   <button onclick="sendChat()" style="padding:1px 4px; font-size:7px; height:18px; line-height:16px;">Invia</button>
-  </div>
- </section>
+ <div class="panel" style="flex:1; justify-content:flex-start;">
+  <div class="label">Log errori in tempo reale</div>
+  <div id="debugLog">Inizializzazione...<br></div>
+ </div>
 </main>
 
-<footer>Scopa Napoletana · Monopolygoita</footer>
-
 <script>
+function logDebug(msg) {
+  const box = document.getElementById("debugLog");
+  box.innerHTML += msg + "<br>";
+  box.scrollTop = box.scrollHeight;
+  console.log(msg);
+}
+
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const tg = window.Telegram?.WebApp || {};
-try { if (tg.expand) tg.expand(); } catch(e){}
+try {
+  logDebug("Caricamento libreria Supabase...");
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  logDebug("Client Supabase creato con successo.");
 
-const user = tg.initDataUnsafe?.user;
-const userId = user ? user.id : Math.floor(Math.random() * 1000000);
-const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
-const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
+  const suits = ["denari", "coppe", "spade", "bastoni"];
+  const files = [
+    "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
+    "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+    "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
+    "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+  ];
 
-let currentGameId = null;
-let playerRole = 'player1';
-let gameState = {
-  board_cards: [],
-  player1_hand: [],
-  player2_hand: [],
-  player1_score: 0,
-  player2_score: 0,
-  deck: [],
-  turn: userId,
-  status: 'playing',
-  player1_id: userId,
-  player1_name: userName,
-  player2_id: null,
-  player2_name: 'In attesa...'
-};
-let selectedCardId = null;
+  function makeDeck(){
+    return files.map((file,i)=>({
+      id:i+1, rank:(i%10)+1, suit:suits[Math.floor(i/10)], file, value:(i%10)+1
+    })).sort(() => Math.random() - 0.5);
+  }
 
-const suits = ["denari", "coppe", "spade", "bastoni"];
-const files = [
-  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
-  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
-  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
-  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
-];
+  function imageURL(c){
+    let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg");
+    return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
+  }
 
-// Pulizia array file per evitare doppioni
-const cleanFiles = Array.from(new Set(files));
-
-function makeDeck(){
- const d = cleanFiles.map((file,i)=>({
-  id:i+1, rank:(i%10)+1, suit:suits[Math.floor(i/10)],
-  file, value:(i%10)+1
- }));
- for(let i=d.length-1; i>0; i--){
-  const j = Math.floor(Math.random()*(i+1));
-  [d[i], d[j]] = [d[j], d[i]];
- }
- return d;
-}
-
-function imageURL(c){
- let fname = (c && c.file) ? c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg") : "01 Asso di denari.jpg";
- return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
-}
-
-async function initMultiplayer() {
-  document.getElementById("connectionStatus").textContent = "Connessione al database...";
-
-  try {
-    let { data: games, error } = await supabase
-      .from('games')
-      .select('*')
-      .eq('chat_id', chatId)
-      .neq('status', 'finished')
-      .limit(1);
-
-    if (error) throw error;
-
-    if (games && games.length > 0) {
-      const game = games[0];
-      currentGameId = game.id;
-      gameState = game;
-
-      if (game.player1_id === userId) {
-        playerRole = 'player1';
-      } else if (game.player2_id === userId) {
-        playerRole = 'player2';
-      } else if (!game.player2_id || game.status === 'waiting') {
-        playerRole = 'player2';
-        const deck = game.deck && game.deck.length > 0 ? game.deck : makeDeck();
-        const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-        const p1Hand = game.player1_hand && game.player1_hand.length > 0 ? game.player1_hand : [deck.pop(), deck.pop(), deck.pop()];
-        const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
-
-        const updateData = {
-          player2_id: userId,
-          player2_name: userName,
-          status: 'playing',
-          board_cards: board,
-          player1_hand: p1Hand,
-          player2_hand: p2Hand,
-          deck: deck,
-          turn: game.player1_id
-        };
-
-        await supabase.from('games').update(updateData).eq('id', currentGameId);
-        Object.assign(gameState, updateData);
-      } else {
-        playerRole = 'spectator';
-        document.getElementById("spectateBtn").classList.remove("hidden");
-      }
-    } else {
-      // Crea nuovo gioco se la tabella è vuota
-      const deck = makeDeck();
-      const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
-      const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
-      
-      const newRecord = {
-        chat_id: chatId,
-        player1_id: userId,
-        player1_name: userName,
-        status: 'playing',
-        board_cards: board,
-        player1_hand: p1Hand,
-        player2_hand: p2Hand,
-        player1_captured: [],
-        player2_captured: [],
-        player1_score: 0,
-        player2_score: 0,
-        deck: deck,
-        turn: userId
-      };
-
-      const { data: newGame, error: errIns } = await supabase.from('games').insert([newRecord]).select().single();
-      if (errIns) throw errIns;
-
-      if (newGame) {
-        currentGameId = newGame.id;
-        gameState = newGame;
-        playerRole = 'player1';
-      }
-    }
-  } catch (err) {
-    console.warn("Fallback locale attivo per errore di rete:", err);
-    // Fallback immediato locale per garantire che le carte compaiano sempre e comunque
+  window.addEventListener('DOMContentLoaded', async () => {
+    logDebug("DOM caricato. Generazione mazzo locale...");
     const deck = makeDeck();
-    gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-    gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-    gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-    gameState.deck = deck;
-    playerRole = 'player1';
-  }
+    const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    const hand = [deck.pop(), deck.pop(), deck.pop()];
 
-  render();
-  subscribeRealtime();
-}
+    logDebug("Disegno tavolo (" + board.length + " carte) e mano ("+ hand.length +" carte)...");
 
-function joinAsSpectator() {
-  playerRole = 'spectator';
-  document.getElementById("spectateBtn").classList.add("hidden");
-  document.getElementById("connectionStatus").textContent = "👁️ Entrato come Spettatore";
-  render();
-}
+    const mArea = document.getElementById("middle");
+    const pArea = document.getElementById("player");
 
-function subscribeRealtime() {
-  if (!currentGameId) return;
-  supabase
-    .channel('room_' + currentGameId)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${currentGameId}` }, (payload) => {
-      gameState = payload.new;
-      render();
-    })
-    .subscribe();
-}
-
-function render() {
-  const pArea = document.getElementById("player");
-  const mArea = document.getElementById("middle");
-  const oArea = document.getElementById("opponent");
-  const playerPanel = document.getElementById("playerPanel");
-  const opponentPanel = document.getElementById("opponentPanel");
-
-  pArea.replaceChildren();
-  mArea.replaceChildren();
-  oArea.replaceChildren();
-
-  const isP1 = (playerRole === 'player1');
-  const myTurn = (gameState.turn === userId && gameState.status === 'playing' && playerRole !== 'spectator');
-
-  if (playerRole !== 'spectator') {
-    if (myTurn) {
-      playerPanel.classList.add("active-turn");
-      opponentPanel.classList.remove("active-turn");
-    } else {
-      playerPanel.classList.remove("active-turn");
-      opponentPanel.classList.add("active-turn");
-    }
-  } else {
-    playerPanel.classList.remove("active-turn");
-    opponentPanel.classList.remove("active-turn");
-  }
-
-  document.getElementById("score").textContent = 
-    `${gameState.player1_name || 'G1'}: ${gameState.player1_score || 0} / 11 — ${gameState.player2_name || 'G2'}: ${gameState.player2_score || 0} / 11`;
-
-  if (playerRole === 'spectator') {
-    document.getElementById("myRoleLabel").textContent = "CARTE " + (gameState.player1_name || "G1");
-    document.getElementById("opponentLabel").textContent = "CARTE " + (gameState.player2_name || "G2");
-    document.getElementById("connectionStatus").textContent = "👁️ Modalità Spettatore";
-  } else {
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : (gameState.player2_name || userName)) + ")";
-    document.getElementById("opponentLabel").textContent = "AVVERSARIO";
-    document.getElementById("connectionStatus").textContent = "Partita attiva in corso";
-  }
-
-  const myHand = (playerRole === 'spectator' || isP1) ? gameState.player1_hand : gameState.player2_hand;
-  if (myHand && Array.isArray(myHand)) {
-    myHand.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
-      im.src = imageURL(c);
-      im.alt = c.file || "carta";
-      im.onclick = () => {
-        if (playerRole !== 'spectator') {
-          selectedCardId = c.id;
-          render();
-        }
-      };
-      pArea.appendChild(im);
-    });
-  }
-
-  const oppHand = (playerRole === 'spectator' || isP1) ? gameState.player2_hand : gameState.player1_hand;
-  if (oppHand && Array.isArray(oppHand)) {
-    oppHand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.board_cards && Array.isArray(gameState.board_cards)) {
-    gameState.board_cards.forEach(c => {
+    board.forEach(c => {
       const im = document.createElement("img");
       im.className = "card";
       im.src = imageURL(c);
-      im.alt = c.file || "tavolo";
       mArea.appendChild(im);
     });
-  }
 
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + (Array.isArray(gameState.deck) ? gameState.deck.length : 0);
-  }
+    hand.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card";
+      im.src = imageURL(c);
+      pArea.appendChild(im);
+    });
 
-  document.getElementById("play").disabled = selectedCardId === null;
-  document.getElementById("message").textContent = "Tocca una carta e premi gioca per effettuare la mossa!";
+    document.getElementById("status").textContent = "Test di rendering completato!";
+    logDebug("Rendering completato con successo!");
+  });
+
+} catch (err) {
+  logDebug("ERRORE CRITICO: " + err.message);
 }
-
-async function playPlayerCard() {
-  if (selectedCardId === null) return;
-
-  const isP1 = (playerRole === 'player1');
-  const myHand = isP1 ? [...(gameState.player1_hand || [])] : [...(gameState.player2_hand || [])];
-  const card = myHand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  const newMyHand = myHand.filter(c => c.id !== card.id);
-  let board = [...(gameState.board_cards || [])];
-  let captured = isP1 ? [...(gameState.player1_captured || [])] : [...(gameState.player2_captured || [])];
-
-  let exactIndex = board.findIndex(c => c.value === card.value);
-  if (exactIndex !== -1) {
-    const taken = board.splice(exactIndex, 1)[0];
-    captured.push(card, taken);
-  } else {
-    board.push(card);
-  }
-
-  let deck = [...(gameState.deck || [])];
-  let p1Hand = isP1 ? newMyHand : [...(gameState.player1_hand || [])];
-  let p2Hand = isP1 ? [...(gameState.player2_hand || [])] : newMyHand;
-
-  if (p1Hand.length === 0 && p2Hand.length === 0 && deck.length > 0) {
-    p1Hand = [deck.pop(), deck.pop(), deck.pop()];
-    p2Hand = [deck.pop(), deck.pop(), deck.pop()];
-  }
-
-  gameState.board_cards = board;
-  gameState.player1_hand = p1Hand;
-  gameState.player2_hand = p2Hand;
-  gameState.deck = deck;
-  if (isP1) gameState.player1_captured = captured;
-  else gameState.player2_captured = captured;
-
-  selectedCardId = null;
-  render();
-
-  if (currentGameId) {
-    try {
-      await supabase.from('games').update({
-        board_cards: board,
-        player1_hand: p1Hand,
-        player2_hand: p2Hand,
-        deck: deck,
-        player1_captured: gameState.player1_captured,
-        player2_captured: gameState.player2_captured
-      }).eq('id', currentGameId);
-    } catch(e) {
-      console.warn("Aggiornamento remota saltato, continuo in locale");
-    }
-  }
-}
-
-function sendChat() {
-  const input = document.getElementById("chatInput");
-  const val = input.value.trim();
-  if(!val) return;
-  const log = document.getElementById("chatlog");
-  const line = document.createElement("div");
-  line.innerHTML = "<b>" + userName + ":</b> " + val;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
-  input.value = "";
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  initMultiplayer();
-});
 </script>
 </body>
 </html>
