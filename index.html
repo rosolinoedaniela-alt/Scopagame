@@ -46,4 +46,246 @@ main {
 .back {
  width:clamp(35px, 11vw, 44px); height:auto; aspect-ratio:1324/2188;
  background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 8px);
- border:2
+ border:2px double #f2d8a4; border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
+}
+
+.action-row { display:flex; align-items:center; gap:4px; width:100%; justify-content:center; margin-top:1px; }
+button { border:1px solid #ffe3a0; border-radius:4px; padding:2px 8px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
+button:disabled{opacity:0.4;cursor:not-allowed}
+
+#message{font-size:8px;font-weight:bold;color:#ffe7a7;min-height:10px;margin:0}
+#chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
+#chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:2px; }
+.chatrow {display:flex; gap:3px; width:100%}
+#chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
+footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
+.hidden{display:none!important}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<header>
+ <div class="brand">Dany presenta</div>
+ <h1>Scopa di Monopolygoita</h1>
+ <div id="score">Giocatore 1: 0 / 11 — Giocatore 2: 0 / 11</div>
+ <div id="connectionStatus">Tavolo pronto</div>
+</header>
+
+<main>
+ <section class="panel" id="opponentPanel">
+  <div id="opponentLabel" class="label">AVVERSARIO</div>
+  <div id="opponent" class="area"></div>
+ </section>
+
+ <section class="panel" id="table">
+  <div id="remaining">🂠 --</div>
+  <div class="label">✦ TAVOLO DA GIOCO ✦</div>
+  <div id="middle" class="area"></div>
+ </section>
+
+ <section class="panel" id="playerPanel">
+  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
+  <div id="player" class="area"></div>
+  <div class="action-row">
+   <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
+  </div>
+ </section>
+
+ <div id="message" aria-live="polite">Partita pronta!</div>
+
+ <section class="panel" id="chat">
+  <div class="label">💬 CHAT DEL TAVOLO</div>
+  <div id="chatlog" aria-live="polite">Connesso alla chat.</div>
+  <div class="chatrow">
+   <input id="chatInput" maxlength="180" placeholder="Messaggio…">
+   <button onclick="sendChat()" style="padding:1px 4px; font-size:7px; height:18px; line-height:16px;">Invia</button>
+  </div>
+ </section>
+</main>
+
+<footer>Scopa Napoletana · Monopolygoita</footer>
+
+<script>
+const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const tg = window.Telegram?.WebApp || {};
+try { if (tg.expand) tg.expand(); } catch(e){}
+
+const user = tg.initDataUnsafe?.user;
+const userId = user ? user.id : Math.floor(Math.random() * 1000000);
+const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
+const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
+
+let currentGameId = null;
+let gameState = {
+  board_cards: [],
+  player1_hand: [],
+  player2_hand: [],
+  player1_score: 0,
+  player2_score: 0,
+  deck: [],
+  turn: userId,
+  status: 'playing',
+  player1_id: userId,
+  player1_name: userName,
+  player2_id: null,
+  player2_name: 'Avversario'
+};
+let selectedCardId = null;
+
+const suits = ["denari", "coppe", "spade", "bastoni"];
+const files = [
+  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
+  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
+  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+];
+
+const cleanFiles = Array.from(new Set(files));
+
+function makeDeck(){
+ const d = cleanFiles.map((file,i)=>({
+  id:i+1, rank:(i%10)+1, suit:suits[Math.floor(i/10)], file, value:(i%10)+1
+ }));
+ for(let i=d.length-1; i>0; i--){
+  const j = Math.floor(Math.random()*(i+1));
+  [d[i], d[j]] = [d[j], d[i]];
+ }
+ return d;
+}
+
+function imageURL(c){
+ let fname = (c && c.file) ? c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg") : "01 Asso di denari.jpg";
+ return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
+}
+
+async function initGame() {
+  try {
+    let { data: games } = await supabase.from('games').select('*').eq('chat_id', chatId).neq('status', 'finished').limit(1);
+
+    if (games && games.length > 0) {
+      currentGameId = games[0].id;
+      gameState = games[0];
+    } else {
+      const deck = makeDeck();
+      const newRecord = {
+        chat_id: chatId,
+        player1_id: userId,
+        player1_name: userName,
+        status: 'playing',
+        board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
+        player1_hand: [deck.pop(), deck.pop(), deck.pop()],
+        player2_hand: [deck.pop(), deck.pop(), deck.pop()],
+        deck: deck,
+        turn: userId
+      };
+      const { data: newGame } = await supabase.from('games').insert([newRecord]).select().single();
+      if (newGame) {
+        currentGameId = newGame.id;
+        gameState = newGame;
+      }
+    }
+  } catch (e) {
+    const deck = makeDeck();
+    gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+  }
+
+  render();
+  subscribeRealtime();
+}
+
+function subscribeRealtime() {
+  if (!currentGameId) return;
+  supabase.channel('room_' + currentGameId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${currentGameId}` }, (payload) => {
+      gameState = payload.new;
+      render();
+    })
+    .subscribe();
+}
+
+function render() {
+  const pArea = document.getElementById("player");
+  const mArea = document.getElementById("middle");
+  const oArea = document.getElementById("opponent");
+
+  pArea.replaceChildren();
+  mArea.replaceChildren();
+  oArea.replaceChildren();
+
+  if (gameState.board_cards) {
+    gameState.board_cards.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card";
+      im.src = imageURL(c);
+      mArea.appendChild(im);
+    });
+  }
+
+  if (gameState.player1_hand) {
+    gameState.player1_hand.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
+      im.src = imageURL(c);
+      im.onclick = () => { selectedCardId = c.id; render(); };
+      pArea.appendChild(im);
+    });
+  }
+
+  if (gameState.player2_hand) {
+    gameState.player2_hand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
+  }
+
+  if (gameState.deck) {
+    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+  }
+
+  document.getElementById("play").disabled = selectedCardId === null;
+}
+
+async function playPlayerCard() {
+  if (selectedCardId === null) return;
+  const hand = [...(gameState.player1_hand || [])];
+  const card = hand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  gameState.board_cards.push(card);
+  selectedCardId = null;
+  render();
+
+  if (currentGameId) {
+    await supabase.from('games').update({
+      board_cards: gameState.board_cards,
+      player1_hand: gameState.player1_hand,
+      deck: gameState.deck
+    }).eq('id', currentGameId);
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+  const log = document.getElementById("chatlog");
+  const line = document.createElement("div");
+  line.innerHTML = "<b>" + userName + ":</b> " + val;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
+}
+
+window.addEventListener('DOMContentLoaded', () => { initGame(); });
+</script>
+</body>
+</html>
