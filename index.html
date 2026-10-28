@@ -238,7 +238,9 @@ function makeDeck(){
 }
 
 function imageURL(c){
- return "https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(c.file);
+ // Correzione robusta per evitare errori di caricamento Wikimedia
+ let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg");
+ return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
 async function initMultiplayer() {
