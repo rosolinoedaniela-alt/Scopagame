@@ -23,83 +23,81 @@ body {
  display:flex;
  flex-direction:column;
  justify-content:space-between;
- padding:6px 10px;
+ padding:3px 6px;
 }
 
 header {
- padding:4px 8px;
+ padding:2px 4px;
  background:linear-gradient(135deg,#062b1e,#134e32,#062b1e);
  border:1px solid var(--gold);
- border-radius:10px;
+ border-radius:8px;
  flex-shrink:0;
- box-shadow:0 2px 6px rgba(0,0,0,0.4);
 }
-.brand{font-size:8px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase}
-h1{margin:2px 0;color:var(--gold);font-size:15px;letter-spacing:1px}
-#score{font-size:11px;font-weight:bold;margin:2px 0;color:#ffe7a7}
-#connectionStatus{font-size:9px;color:#f5d58b}
+.brand{font-size:7px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
+h1{margin:1px 0;color:var(--gold);font-size:13px;letter-spacing:1px}
+#score{font-size:10px;font-weight:bold;margin:1px 0;color:#ffe7a7}
+#connectionStatus{font-size:8px;color:#f5d58b}
 
 main {
  flex:1;
  display:flex;
  flex-direction:column;
- justify-content:space-around;
- gap:6px;
- max-width:520px;
+ justify-content:space-between;
+ gap:3px;
+ max-width:480px;
  margin:auto;
  width:100%;
- padding:2px 0;
+ padding:1px 0;
 }
 
 .panel {
  margin:0;
- padding:6px 8px;
- border:1px solid #f5d58b99;
- border-radius:12px;
- background:linear-gradient(145deg,rgba(255,255,255,0.07),rgba(0,0,0,0.25));
+ padding:4px 6px;
+ border:1px solid #f5d58b88;
+ border-radius:10px;
+ background:linear-gradient(145deg,rgba(255,255,255,0.06),rgba(0,0,0,0.25));
  display:flex;
  flex-direction:column;
  justify-content:center;
  align-items:center;
- box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 
-.label{font-size:10px;letter-spacing:1.5px;color:var(--gold);font-weight:bold;margin-bottom:4px;text-transform:uppercase}
+.label{font-size:9px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:2px;text-transform:uppercase}
 
 .area{
  display:flex;
  justify-content:center;
  align-items:center;
- gap:8px;
+ gap:6px;
  flex-wrap:nowrap;
  min-height:65px;
  width:100%;
- padding:2px;
- overflow-x:auto;
+ padding:1px;
 }
 
 #table {
  background:radial-gradient(ellipse,#18633e,#083824);
  border:1px double var(--gold);
- min-height:75px;
+ min-height:70px;
  position:relative;
 }
 
 #remaining {
  position:absolute;
- top:6px;
- right:10px;
- padding:2px 6px;
+ top:4px;
+ right:8px;
+ padding:1px 5px;
  border:1px solid var(--gold);
- border-radius:8px;
+ border-radius:6px;
  background:#042116;
  color:#ffe7a7;
- font-size:9px;
+ font-size:8px;
  font-weight:bold;
 }
 
+/* CARTE INGRANDITE */
 .card {
- width:clamp(45px, 14vw, 62px);
+ width:clamp(50px, 16vw, 68px);
  height:auto;
  aspect-ratio:1324/2188;
  object-fit:contain;
@@ -107,15 +105,16 @@ main {
  border:2px solid #e6d5a7;
  border-radius:6px;
  cursor:pointer;
- transition:transform .15s, box-shadow .15s;
- box-shadow:0 2px 5px rgba(0,0,0,0.3);
+ transition:transform .15s;
+ box-shadow:0 3px 6px rgba(0,0,0,0.4);
 }
-.card.selected{transform:translateY(-6px);outline:3px solid #ffe17c;box-shadow:0 0 12px #ffdf76}
+.card.selected{transform:translateY(-6px);outline:3px solid #ffe17c;box-shadow:0 0 10px #ffdf76}
+
 .back {
- width:clamp(40px, 12vw, 52px);
+ width:clamp(42px, 13vw, 55px);
  height:auto;
  aspect-ratio:1324/2188;
- background:repeating-linear-gradient(45deg,#8b2530,#8b2530 5px,#f2d8a4 6px,#8b2530 9px);
+ background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 8px);
  border:2px double #f2d8a4;
  border-radius:6px;
  box-shadow:0 2px 5px rgba(0,0,0,0.3);
@@ -124,35 +123,34 @@ main {
 .action-row {
  display:flex;
  align-items:center;
- gap:10px;
+ gap:8px;
  width:100%;
  justify-content:center;
- margin-top:2px;
+ margin-top:1px;
 }
 
 button {
  border:1px solid #ffe3a0;
- border-radius:8px;
- padding:6px 16px;
+ border-radius:6px;
+ padding:4px 14px;
  background:linear-gradient(135deg,#ffe6a0,#bd8e35);
  color:#122a1b;
  font-weight:bold;
- font-size:12px;
+ font-size:11px;
  cursor:pointer;
- box-shadow:0 2px 5px rgba(0,0,0,0.2);
- transition:transform 0.1s;
+ box-shadow:0 2px 4px rgba(0,0,0,0.2);
 }
-button:active{transform:scale(0.96)}
-button:disabled{opacity:0.5;cursor:not-allowed}
+button:disabled{opacity:0.4;cursor:not-allowed}
 
-#message{font-size:11px;font-weight:bold;color:#ffe7a7;min-height:16px;margin:2px 0}
+#message{font-size:10px;font-weight:bold;color:#ffe7a7;min-height:14px;margin:1px 0}
 
-#chat {padding:6px 8px; flex-shrink:0;}
-#chatlog {height:45px; overflow-y:auto; background:rgba(2, 24, 15, 0.7); border:1px solid #f5d58b44; border-radius:6px; padding:4px 8px; font-size:10px; width:100%; text-align:left; margin-bottom:4px;}
-.chatrow {display:flex; gap:6px; width:100%}
-#chatInput {flex:1; border-radius:6px; padding:5px 8px; border:1px solid var(--gold); font-size:11px; background:#fff; color:#000;}
+/* CHAT OTTIMIZZATA E SEMPRE VISIBILE */
+#chat {padding:4px 6px; flex-shrink:0;}
+#chatlog {height:36px; overflow-y:auto; background:rgba(2, 24, 15, 0.85); border:1px solid #f5d58b55; border-radius:6px; padding:3px 6px; font-size:9px; width:100%; text-align:left; margin-bottom:2px;}
+.chatrow {display:flex; gap:4px; width:100%}
+#chatInput {flex:1; border-radius:6px; padding:3px 6px; border:1px solid var(--gold); font-size:10px; background:#fff; color:#000;}
 
-footer {font-size:9px;color:#d4c39c;padding:2px;flex-shrink:0;letter-spacing:0.5px}
+footer {font-size:8px;color:#d4c39c;padding:1px;flex-shrink:0}
 .hidden{display:none!important}
 </style>
 
@@ -162,13 +160,13 @@ footer {font-size:9px;color:#d4c39c;padding:2px;flex-shrink:0;letter-spacing:0.5
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="connectionStatus">Tavolo pronto · Gioco libero</div>
+ <div id="connectionStatus">Tavolo pronto · Turno tuo</div>
  <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
 </header>
 
 <main>
  <section class="panel">
-  <div id="opponentLabel" class="label">AVVERSARIO</div>
+  <div id="opponentLabel" class="label">AVVERSARIO (IN ATTESA)</div>
   <div id="opponent" class="area"></div>
  </section>
 
@@ -186,14 +184,14 @@ footer {font-size:9px;color:#d4c39c;padding:2px;flex-shrink:0;letter-spacing:0.5
   </div>
  </section>
 
- <div id="message" aria-live="polite">Tocca una carta per selezionarla e giocarla!</div>
+ <div id="message" aria-live="polite">Tocca una tua carta e premi gioca!</div>
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO</div>
-  <div id="chatlog" aria-live="polite"><b>Benvenuto:</b> Tavolo aperto e chat attiva!</div>
+  <div id="chatlog" aria-live="polite"><b>Info:</b> Chat attiva e visibile.</div>
   <div class="chatrow">
    <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
-   <button onclick="sendChat()" style="padding:4px 10px; font-size:10px;">Invia</button>
+   <button onclick="sendChat()" style="padding:3px 8px; font-size:9px;">Invia</button>
   </div>
  </section>
 </main>
@@ -234,6 +232,7 @@ let boardCards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
 let myHand = [deck.pop(), deck.pop(), deck.pop()];
 let oppHand = [{}, {}, {}];
 let selectedCardId = null;
+let isMyTurn = true; // Blocco turno attivo
 
 function renderLocal() {
   const pArea = document.getElementById("player");
@@ -250,6 +249,7 @@ function renderLocal() {
     im.src = imageURL(c);
     im.alt = c.file;
     im.onclick = () => {
+      if (!isMyTurn) return; // Impedisce di toccare le carte se non è il tuo turno
       selectedCardId = c.id;
       renderLocal();
     };
@@ -270,30 +270,29 @@ function renderLocal() {
   });
 
   document.getElementById("remaining").textContent = "🂠 " + deck.length;
-  document.getElementById("play").disabled = selectedCardId === null;
+  document.getElementById("play").disabled = !isMyTurn || selectedCardId === null;
+  
+  if (isMyTurn) {
+    document.getElementById("connectionStatus").textContent = "Tavolo pronto · Turno tuo";
+    document.getElementById("message").textContent = "Tocca una carta e premi gioca!";
+  } else {
+    document.getElementById("connectionStatus").textContent = "In attesa dell'avversario...";
+    document.getElementById("message").textContent = "Hai giocato! In attesa della mossa dell'avversario (turno bloccato).";
+  }
 }
 
 function playCard() {
-  if (selectedCardId === null) return;
-  const cardObj = myHand.find(c => c.id === selectedCardId);
+  if (!isMyTurn || selectedCardId === null) return;
+  
   myHand = myHand.filter(c => c.id !== selectedCardId);
   
-  if (cardObj) {
-    let exactIndex = boardCards.findIndex(c => c.value === cardObj.value);
-    if (exactIndex !== -1) {
-      boardCards.splice(exactIndex, 1);
-    } else {
-      boardCards.push(cardObj);
-    }
+  let exactIndex = boardCards.findIndex(c => c.value === selectedCardId);
+  if (exactIndex !== -1) {
+    boardCards.splice(exactIndex, 1);
   }
 
   selectedCardId = null;
-  
-  if (myHand.length === 0 && deck.length > 0) {
-    myHand = [deck.pop(), deck.pop(), deck.pop()];
-    oppHand = [{}, {}, {}];
-  }
-  
+  isMyTurn = false; // BLOCCO RIGOROSO DEL TURNO CONSECUTIVO
   renderLocal();
 }
 
