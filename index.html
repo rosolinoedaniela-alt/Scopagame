@@ -14,41 +14,40 @@ html, body {
  display:flex; flex-direction:column; justify-content:space-between; padding:2px 4px;
 }
 header {
- padding:2px 6px; background:linear-gradient(135deg,#062b1e,#134e32,#062b1e);
- border:1px solid var(--gold); border-radius:6px; flex-shrink:0;
+ padding:1px 4px; background:linear-gradient(135deg,#062b1e,#134e32,#062b1e);
+ border:1px solid var(--gold); border-radius:5px; flex-shrink:0;
 }
-.brand{font-size:7px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
-h1{margin:0;color:var(--gold);font-size:11px;letter-spacing:1px}
-#score{font-size:9px;font-weight:bold;margin:1px 0;color:#ffe7a7}
+.brand{font-size:6px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
+h1{margin:0;color:var(--gold);font-size:10px;letter-spacing:1px}
 
 main {
- flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:2px;
+ flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:1px;
  max-width:480px; margin:0 auto; width:100%; padding:1px 0; min-height:0;
 }
 .panel {
- margin:0; padding:2px 4px; border:1px solid #f5d58b55; border-radius:6px;
+ margin:0; padding:1px 3px; border:1px solid #f5d58b55; border-radius:5px;
  background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(0,0,0,0.2));
  display:flex; flex-direction:column; justify-content:center; align-items:center; transition:all 0.3s ease;
 }
-.panel.active-turn { border: 2px solid #ffdf76; box-shadow: 0 0 10px #ffdf76; background: rgba(255, 223, 118, 0.1); }
+.panel.active-turn { border: 2px solid #ffdf76; box-shadow: 0 0 8px #ffdf76; background: rgba(255, 223, 118, 0.1); }
 
 .label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
 
 .area {
  display:flex; justify-content:center; align-items:center; gap:4px;
- flex-wrap:nowrap; min-height:48px; width:100%; padding:2px;
+ flex-wrap:nowrap; min-height:56px; width:100%; padding:1px;
 }
 
 #table {
  background:radial-gradient(ellipse,#18633e,#083824);
  border:1px double var(--gold);
- min-height:75px;
+ min-height:82px;
  position:relative;
  display:flex;
  flex-direction:column;
  justify-content:center;
  align-items:center;
- gap:3px;
+ gap:2px;
 }
 
 .table-row {
@@ -62,22 +61,22 @@ main {
 #remaining { position:absolute; top:2px; right:4px; padding:1px 3px; border:1px solid var(--gold); border-radius:3px; background:#042116; color:#ffe7a7; font-size:7px; font-weight:bold; z-index:5; }
 
 .card {
- width:clamp(40px, 12vw, 48px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
+ width:clamp(46px, 14vw, 56px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
  background:#fff8e9; border:2px solid #e6d5a7; border-radius:5px; cursor:pointer; transition:transform .15s; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
 .card.selected{transform:translateY(-4px);outline:3px solid #ffe17c;box-shadow:0 0 8px #ffdf76}
 .back {
- width:clamp(34px, 10vw, 42px); height:auto; aspect-ratio:1324/2188;
+ width:clamp(40px, 12vw, 48px); height:auto; aspect-ratio:1324/2188;
  background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 8px);
  border:2px double #f2d8a4; border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
 
 .action-row { display:flex; align-items:center; gap:6px; width:100%; justify-content:center; margin-top:1px; }
-button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 16px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
+button { border:1px solid #ffe3a0; border-radius:4px; padding:2px 14px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:8px; cursor:pointer; }
 button:disabled{opacity:0.4;cursor:not-allowed}
 
-#chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
-#chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:2px; }
+#chat { padding:1px 3px; flex-shrink:0; margin-bottom:1px; }
+#chatlog { height:20px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:1px; }
 .chatrow {display:flex; gap:3px; width:100%}
 #chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
 
@@ -118,7 +117,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="score">Punti - Connessione in corso...</div>
 </header>
 
 <main>
@@ -130,7 +128,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  <section class="panel" id="table">
   <div id="remaining">🂠 --</div>
   <div class="label" style="margin-bottom:0;">✦ TAVOLO DA GIOCO ✦</div>
-  <div id="tableRowsContainer" style="width:100%; display:flex; flex-direction:column; gap:3px;"></div>
+  <div id="tableRowsContainer" style="width:100%; display:flex; flex-direction:column; gap:2px;"></div>
  </section>
 
  <section class="panel" id="playerPanel">
@@ -288,20 +286,23 @@ function render() {
   const p1Name = gameState.player1_id || 'P1';
   const p2Name = gameState.player2_id || 'P2';
 
-  // Assegna i nomi corretti sotto i riquadri delle carte
   const activePlayerName = myRole === 'player2' ? p2Name : p1Name;
-  const opponentPlayerName = myRole === 'player2' ? p1Name : (p2Name === 'P2' ? 'In attesa...' : p2Name);
+  const activePlayerScore = myRole === 'player2' ? gameState.player2_score : gameState.player1_score;
 
-  document.getElementById("opponentLabel").textContent = "AVVERSARIO: " + opponentPlayerName;
+  const opponentPlayerName = myRole === 'player2' ? p1Name : (p2Name === 'P2' ? 'In attesa...' : p2Name);
+  const opponentPlayerScore = myRole === 'player2' ? gameState.player1_score : gameState.player2_score;
+
+  // Mostra i nomi con i rispettivi punti personali accanto
+  document.getElementById("opponentLabel").textContent = `AVVERSARIO: ${opponentPlayerName} (${opponentPlayerScore} pt)`;
 
   if (isMyTurn && !isSpectator) {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + activePlayerName + " - È IL TUO TURNO!)";
+    document.getElementById("myRoleLabel").textContent = `LE TUE CARTE: ${activePlayerName} (${activePlayerScore} pt) - È IL TUO TURNO!`;
   } else {
     pPanel.classList.remove('active-turn');
     oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + activePlayerName + (isSpectator ? " - SPETTATORE 👁️" : " - ATTENDI IL TURNO") + ")";
+    document.getElementById("myRoleLabel").textContent = `LE TUE CARTE: ${activePlayerName} (${activePlayerScore} pt)` + (isSpectator ? " - SPETTATORE 👁️" : " - ATTENDI IL TURNO");
   }
 
   if (gameState.board_cards) {
@@ -363,7 +364,6 @@ function render() {
     document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
   }
 
-  document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score} | ${p2Name}: ${gameState.player2_score}`;
   document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 
   // Controllo fine partita a 11 punti
