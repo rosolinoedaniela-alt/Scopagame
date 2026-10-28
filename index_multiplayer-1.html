@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scopa Monopolygoita</title>
+<style>
+*{box-sizing:border-box}
+:root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
+body{
+ margin:0;
+ background:radial-gradient(ellipse at top,#287a50,#061c14 78%);
+ color:var(--cream);font-family:Arial,sans-serif;text-align:center;min-height:100vh
+}
+header{
+ padding:18px 10px 14px;
+ background:linear-gradient(135deg,#08291d,#1c6945,#08291d);
+ border-bottom:2px solid var(--gold);
+ box-shadow:0 5px 22px #0008
+}
+.brand{font-size:12px;letter-spacing:4px;color:var(--gold)}
+h1{margin:5px 0;color:var(--gold);font-size:clamp(25px,7vw,38px);letter-spacing:3px;text-shadow:0 2px 14px #d2a64b88}
+#score{font-size:18px;font-weight:bold;margin-top:9px}
+.scoreline{max-width:350px;margin:9px auto 0;background:#ffffff22;border-radius:20px;height:8px;overflow:hidden}
+#progress{height:100%;width:0;background:linear-gradient(90deg,#c69a42,#fff0a8);transition:width .4s}
+main{max-width:760px;margin:auto;padding:10px}
+.panel{
+ margin:12px 0;padding:12px 8px;
+ border:1px solid #f5d58b99;border-radius:18px;
+ background:linear-gradient(145deg,#ffffff12,#00000022);
+ box-shadow:0 10px 28px #0005,inset 0 1px #ffffff12
+}
+.label{font-size:12px;letter-spacing:2px;color:var(--gold);font-weight:bold;margin:2px 0 9px}
+.area{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;min-height:80px;padding:5px}
+#table{
+ background:radial-gradient(ellipse,#258456,#0b4931);
+ border:3px double #f5d58b;box-shadow:inset 0 0 30px #001d10,0 8px 24px #0006;
+ min-height:150px
+}
+#remaining{
+ display:inline-block;margin:0 auto 10px;padding:9px 16px;
+ border:2px solid var(--gold);border-radius:25px;
+ background:linear-gradient(135deg,#05291d,#174c35);
+ color:#ffe7a7;font-weight:bold;font-size:15px;
+ box-shadow:0 0 12px #f5d58b33
+}
+.card{
+ width:clamp(49px,14vw,82px);height:auto;aspect-ratio:1324/2188;
+ object-fit:contain;background:#fff8e9;border:2px solid #e6d5a7;
+ border-radius:7px;box-shadow:0 4px 9px #00150c99;
+ cursor:pointer;transition:transform .18s,box-shadow .18s
+}
+.card.selected{transform:translateY(-9px);outline:3px solid #ffe17c;box-shadow:0 0 15px #ffdf76}
+.back{
+ height:105px;background:repeating-linear-gradient(45deg,#8b2530,#8b2530 5px,#f2d8a4 6px,#8b2530 9px);
+ border:3px double #f2d8a4;border-radius:7px;width:clamp(49px,14vw,82px)
+}
+button{
+ border:1px solid #ffe3a0;border-radius:12px;padding:12px 16px;margin:4px;
+ background:linear-gradient(135deg,#ffe6a0,#bd8e35);color:#183522;
+ font-weight:bold;font-size:14px;box-shadow:0 3px 9px #0003;cursor:pointer
+}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.4;cursor:default}
+#message{min-height:0;padding:0;line-height:1.4;font-weight:bold;color:#ffe7a7}
+#chat{text-align:left}
+#chatlog{height:100px;overflow:auto;background:#031c13aa;border-radius:10px;padding:9px;font-size:13px;line-height:1.5}
+.chatrow{display:flex;gap:6px;margin-top:7px}
+#chatInput{min-width:0;flex:1;border-radius:9px;padding:11px;border:1px solid #c6a85e;background:#fdf3d7;color:#183522;font-size:14px}
+.note{font-size:11px;color:#d2c7a9;margin-top:7px}
+footer{font-size:11px;color:#d4c39c;padding:18px}
+.hidden{display:none!important}
+#modal{position:fixed;inset:0;z-index:10;background:#00150fee;display:flex;align-items:center;justify-content:center;padding:14px}
+.dialog{
+ width:min(100%,440px);max-height:90vh;overflow:auto;
+ background:linear-gradient(145deg,#15533a,#08291d);
+ border:2px solid var(--gold);border-radius:20px;padding:19px 14px;
+ box-shadow:0 0 35px #0009
+}
+.dialog h2{color:var(--gold);margin:3px 0 7px}
+#recapScore{font-size:17px;font-weight:bold;margin:8px}
+.recaprow{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:8px;padding:9px 7px;border-bottom:1px solid #ffffff20;font-size:13px}
+.recaprow strong{color:#ffe4a0;white-space:nowrap}
+#resultTitle{font-size:18px;color:#ffe5a1;font-weight:bold;margin:12px 0}
+#confetti{position:fixed;inset:0;z-index:8;pointer-events:none;overflow:hidden}
+.confetto{position:absolute;top:-15px;width:8px;height:13px;animation:fall 2.5s linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(780deg);opacity:.1}}
+#scopaBanner{
+ position:fixed;z-index:9;left:0;right:0;top:37%;
+ font-size:clamp(42px,12vw,72px);font-weight:1000;color:#ffe68c;
+ text-shadow:0 0 10px #f80,0 4px 0 #79420d,0 0 30px #ffd34d;
+ pointer-events:none;animation:pop 1.25s ease forwards
+}
+@keyframes pop{
+ 0%{opacity:0;transform:scale(.2) rotate(-10deg)}
+ 25%{opacity:1;transform:scale(1.2) rotate(4deg)}
+ 65%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.1) translateY(-45px)}
+}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand">MONOPOLYGOITA PRESENTA</div>
+ <h1>♠ SCOPA ♣</h1>
+ <div style="color:#f9e5b1">Carte napoletane · Sfida contro il computer</div>
+ <div id="score">Tu 0 — Computer 0</div>
+ <div class="scoreline"><div id="progress"></div></div>
+ <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
+</header>
+
+<main>
+
+ <section class="panel" id="multiplayerTest">
+  <div class="label">PROVA COLLEGAMENTO MULTIPLAYER</div>
+  <div style="font-size:13px;margin:4px 0 10px">Crea una stanza oppure inserisci il codice ricevuto dall’altro giocatore.</div>
+  <input id="roomCodeInput" maxlength="12" placeholder="Codice stanza"
+   style="width:min(220px,90%);padding:11px;border-radius:9px;border:1px solid #c6a85e;background:#fdf3d7;color:#183522;text-align:center;text-transform:uppercase">
+  <div style="margin-top:8px">
+   <button id="createRoomButton" onclick="mpCreateRoom()">Crea stanza</button>
+   <button id="joinRoomButton" onclick="mpJoinRoom()">Entra nella stanza</button>
+  </div>
+  <div id="mpStatus" aria-live="polite" style="font-size:13px;margin-top:8px;overflow-wrap:anywhere">Pronto per verificare il collegamento.</div>
+  <div class="note">Questa prima prova verifica la creazione e l’accesso alla stanza. Le mosse e i punteggi non sono ancora sincronizzati tra i due giocatori.</div>
+ </section>
+
+ <section class="panel">
+  <div class="label">AVVERSARIO · COMPUTER</div>
+  <div id="opponent" class="area"></div>
+ </section>
+
+ <section class="panel" id="table">
+  <div class="label">✦ TAVOLO DA GIOCO ✦</div>
+  <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
+  <div id="middle" class="area"></div>
+ </section>
+
+ <section class="panel">
+  <div class="label">LE TUE CARTE</div>
+  <div id="player" class="area"></div>
+  <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
+ </section>
+
+ <div id="message" aria-live="polite"></div>
+
+ <section class="panel" id="chat">
+  <div class="label">💬 CHAT DEL TAVOLO</div>
+  <div id="chatlog" aria-live="polite">Benvenuto al tavolo! Buona partita.</div>
+  <div class="chatrow">
+   <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
+   <button onclick="sendChat()">Invia</button>
+  </div>
+  <div class="note">Chat locale: i messaggi sono visibili solo su questo dispositivo.</div>
+ </section>
+</main>
+
+<footer>Scopa Napoletana · Monopolygoita</footer>
+<div id="confetti"></div>
+<div id="scopaBanner" class="hidden">SCOPA!</div>
+
+<div id="modal" class="hidden">
+ <div class="dialog">
+  <div class="brand">MONOPOLYGOITA</div>
+  <h2 id="modalTitle">Riepilogo della mano</h2>
+  <div id="resultTitle"></div>
+  <div id="recapScore"></div>
+  <div id="recapRows"></div>
+  <button id="continueButton" onclick="continueGame()">Continua</button>
+ </div>
+</div>
+
+<script>
+const suits=["denari","coppe","spade","bastoni"];
+const files=[
+"01 Asso di denari.jpg","02 Due di denari.jpg",
+"03 Tre di denari.jpg","04 Quattro di denari.jpg",
+"05 Cinque di denari.jpg","06 Sei di denari.jpg",
+"07 Sette di denari.jpg","08 Otto di denari.jpg",
+"09 Nove di denari.jpg","10 Dieci di denari.jpg",
+"11 Asso di coppe.jpg","12 Due di coppe.jpg",
+"13 Tre di coppe.jpg","14 Quattro di coppe.jpg",
+"15 Cinque di coppe.jpg","16 Sei di coppe.jpg",
+"17 Sette di coppe.jpg","18 Otto di coppe.jpg",
+"19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+"21 Asso di spade.jpg","22 Due di spade.jpg",
+"23 Tre di spade.jpg","24 Quattro di spade.jpg",
+"25 Cinque di spade.jpg","26 Sei di spade.jpg",
+"27 Sette di spade.jpg","28 Otto di spade.jpg",
+"29 Nove di spade.jpg","30 Dieci di spade.jpg",
+"31 Asso di bastoni.jpg","32 Due di bastoni.jpg",
+"33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg",
+"35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg",
+"37 Sette di bastoni.jpg","38 Otto di bastoni.jpg",
+"39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+];
+
+let deck=[],hand=[],cpu=[],table=[],mine=[],theirs=[];
+let selected=null,turn="player",lastTaker=null,finished=false;
+let playerScore=0,cpuScore=0,playerScopes=0,cpuScopes=0;
+let lastRecap=null;
+
+function makeDeck(){
+ const d=files.map((file,i)=>({
+  id:i+1,rank:i%10+1,suit:suits[Math.floor(i/10)],
+  file,value:i%10+1
+ }));
+ for(let i=d.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [d[i],d[j]]=[d[j],d[i]];
+ }
+ return d;
+}
+
+function imageURL(c){
+ return "https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(c.file);
+}
+
+function cardImage(c,area){
+ const im=document.createElement("img");
+ im.className="card"+(area==="player"&&selected===c.id?" selected":"");
+ im.src=imageURL(c);
+ im.alt=c.file;
+ im.loading="lazy";
+ im.onerror=()=>{im.style.background="#f2dfb0";};
+ if(area==="player"&&turn==="player"&&!finished){
+  im.onclick=()=>{selected=c.id;render();};
+ }
+ return im;
+}
+
+function render(){
+ const p=document.getElementById("player");
+ const m=document.getElementById("middle");
+ const o=document.getElementById("opponent");
+ p.replaceChildren();
+ m.replaceChildren();
+ o.replaceChildren();
+
+ hand.forEach(c=>p.appendChild(cardImage(c,"player")));
+ table.forEach(c=>m.appendChild(cardImage(c,"table")));
+ cpu.forEach(()=>{
+  const b=document.createElement("div");
+  b.className="card back";
+  o.appendChild(b);
+ });
+
+ document.getElementById("score").textContent="Tu "+playerScore+" — Computer "+cpuScore;
+ document.getElementById("progress").style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+"%";
+ document.getElementById("remaining").textContent="🂠 CARTE NEL MAZZO: "+deck.length;
+ document.getElementById("play").disabled=turn!=="player"||finished||selected===null;
+}
+
+function say(t){
+ const el=document.getElementById("message");
+ if(t.includes("scegli una carta")||
+    t.includes("Tocca una tua carta")||
+    t.includes("Nuove carte distribuite")||
+    t.includes("Nuova mano!")){
+  el.textContent="";
+  return;
+ }
+ el.textContent=t;
+}
+
+function startHand(){
+ deck=makeDeck();
+ hand=[];cpu=[];table=[];mine=[];theirs=[];
+ selected=null;lastTaker=null;finished=false;turn="player";
+ playerScopes=0;cpuScopes=0;
+ document.getElementById("modal").classList.add("hidden");
+ for(let i=0;i<4;i++)table.push(deck.pop());
+ deal();
+ say("Nuova mano!");
+}
+
+function newGame(){
+ playerScore=0;cpuScore=0;
+ startHand();
+}
+
+function deal(){
+ while(hand.length<3&&deck.length)hand.push(deck.pop());
+ while(cpu.length<3&&deck.length)cpu.push(deck.pop());
+ selected=null;turn="player";
+ render();
+}
+
+function combos(cards,target){
+ const out=[];
+ for(let mask=1;mask<(1<<cards.length);mask++){
+  const group=cards.filter((c,i)=>mask&(1<<i));
+  if(group.reduce((s,c)=>s+c.value,0)===target)out.push(group);
+ }
+ return out;
+}
+
+function celebrate(){
+ const banner=document.getElementById("scopaBanner");
+ banner.classList.remove("hidden");
+ banner.style.animation="none";
+ void banner.offsetWidth;
+ banner.style.animation="";
+
+ const holder=document.getElementById("confetti");
+ holder.replaceChildren();
+
+ for(let i=0;i<75;i++){
+  const bit=document.createElement("i");
+  bit.className="confetto";
+  bit.style.left=Math.random()*100+"%";
+  bit.style.background=["#ffe27a","#fff5d6","#e5b34c","#55cf8d","#ed6b68"][i%5];
+  bit.style.animationDelay=Math.random()*.8+"s";
+  bit.style.animationDuration=(1.5+Math.random()*1.5)+"s";
+  holder.appendChild(bit);
+ }
+
+ setTimeout(()=>{
+  banner.classList.add("hidden");
+  holder.replaceChildren();
+ },3000);
+}
+
+function takeCard(card,who){
+ const exact=table.find(c=>c.value===card.value);
+ let chosen=[];
+
+ if(exact){
+  chosen=[exact];
+ }else{
+  const options=combos(table,card.value);
+  if(options.length){
+   if(who==="player"&&options.length>1){
+    const labels=options.map((g,i)=>
+     (i+1)+") "+g.map(c=>c.file.replace(/\.jpg$/i,"")).join(" + ")
+    ).join("\n");
+    const answer=prompt("Scegli la presa scrivendo il numero:\n"+labels,"1");
+    if(answer===null)return false;
+    const n=Number(answer);
+    if(!Number.isInteger(n)||n<1||n>options.length){
+     say("Numero non valido. Riprova.");
+     return false;
+    }
+    chosen=options[n-1];
+   }else{
+    chosen=options.find(g=>g.length===1)||options[0];
+   }
+  }
+ }
+
+ if(chosen.length){
+  const captured=who==="player"?mine:theirs;
+  captured.push(card,...chosen);
+  table=table.filter(c=>!chosen.some(x=>x.id===c.id));
+  lastTaker=who;
+
+  const cardsStillToPlay=hand.length+cpu.length;
+  const canStillPlay=deck.length>0||cardsStillToPlay>1;
+
+  if(table.length===0&&canStillPlay){
+   if(who==="player"){
+    playerScopes++;
+   }else{
+    cpuScopes++;
+   }
+   celebrate();
+   say(who==="player"?"SCOPA! Hai preso tutte le carte!":"Il computer ha fatto SCOPA!");
+  }else{
+   say(who==="player"?"Hai preso le carte.":"Il computer ha preso le carte.");
+  }
+ }else{
+  table.push(card);
+  say(who==="player"?"Carta calata sul tavolo.":"Il computer ha calato una carta.");
+ }
+ return true;
+}
+
+function playPlayer(){
+ if(turn!=="player"||finished||selected===null)return;
+ const card=hand.find(c=>c.id===selected);
+ if(!card)return;
+ if(!takeCard(card,"player"))return;
+
+ hand=hand.filter(c=>c.id!==card.id);
+ selected=null;
+ render();
+
+ if(hand.length===0&&cpu.length===0){
+  afterTurn();
+  return;
+ }
+ turn="cpu";
+ render();
+ setTimeout(cpuMove,600);
+}
+
+function cpuMove(){
+ if(finished)return;
+ if(!cpu.length){
+  afterTurn();
+  return;
+ }
+ const card=cpu[0];
+ if(!takeCard(card,"cpu"))return;
+ cpu=cpu.slice(1);
+ render();
+ afterTurn();
+}
+
+function afterTurn(){
+ if(!hand.length&&!cpu.length){
+  if(deck.length){
+   deal();
+   say("Nuove carte distribuite. Tocca a te.");
+  }else{
+   finishHand();
+  }
+ }else{
+  turn="player";
+  render();
+  say("Tocca a te: scegli una carta e premi Gioca carta.");
+ }
+}
+
+function primieraValue(c){
+ if(c.rank===7)return 21;
+ if(c.rank===6)return 18;
+ if(c.rank===1)return 16;
+ if(c.rank===5)return 15;
+ if(c.rank===4)return 14;
+ if(c.rank===3)return 13;
+ if(c.rank===2)return 12;
+ return 10;
+}
+
+function primiera(cards){
+ const best={denari:0,coppe:0,spade:0,bastoni:0};
+ for(const c of cards){
+  best[c.suit]=Math.max(best[c.suit],primieraValue(c));
+ }
+ if(Object.values(best).some(v=>v===0))return 0;
+ return Object.values(best).reduce((a,b)=>a+b,0);
+}
+
+function countCoins(cards){
+ return cards.filter(c=>c.suit==="denari").length;
+}
+
+function hasSettebello(cards){
+ return cards.some(c=>c.suit==="denari"&&c.rank===7);
+}
+
+function handBreakdown(cards,opponent,scopes){
+ const rows=[];
+ rows.push({
+  name:"Maggior numero di carte",
+  point:cards.length>opponent.length?1:0,
+  detail:cards.length+" carte contro "+opponent.length
+ });
+ rows.push({
+  name:"Maggior numero di denari",
+  point:countCoins(cards)>countCoins(opponent)?1:0,
+  detail:countCoins(cards)+" denari contro "+countCoins(opponent)
+ });
+ rows.push({
+  name:"Settebello",
+  point:hasSettebello(cards)?1:0,
+  detail:hasSettebello(cards)?"Sette di denari conquistato":"Non conquistato"
+ });
+
+ const a=primiera(cards),b=primiera(opponent);
+ rows.push({
+  name:"Primiera",
+  point:a>b&&a>0?1:0,
+  detail:a>b&&a>0?"Primiera "+a+" contro "+b:
+         a===b?"Parità ("+a+" a "+b+")":"Primiera "+a+" contro "+b
+ });
+ rows.push({
+  name:"Scope",
+  point:scopes,
+  detail:scopes+" scope realizzate"
+ });
+ return rows;
+}
+
+function finishHand(){
+ if(lastTaker==="player")mine.push(...table);
+ else if(lastTaker==="cpu")theirs.push(...table);
+ table=[];
+
+ const pRows=handBreakdown(mine,theirs,playerScopes);
+ const cRows=handBreakdown(theirs,mine,cpuScopes);
+ const p=pRows.reduce((s,r)=>s+r.point,0);
+ const c=cRows.reduce((s,r)=>s+r.point,0);
+
+ playerScore+=p;
+ cpuScore+=c;
+ finished=true;
+ render();
+
+ const gameOver=playerScore>=11||cpuScore>=11;
+ const title=gameOver?
+  (playerScore===cpuScore?"Parità!":playerScore>cpuScore?"🏆 Hai vinto la partita!":"Il computer ha vinto la partita"):
+  "Mano terminata!";
+
+ showRecap(pRows,cRows,p,c,title,gameOver);
+}
+
+function showRecap(pRows,cRows,p,c,title,gameOver){
+ lastRecap={pRows,cRows,p,c,gameOver};
+ document.getElementById("modalTitle").textContent=gameOver?"Fine partita":"Riepilogo della mano";
+ document.getElementById("resultTitle").textContent=title;
+ document.getElementById("recapScore").textContent="Tu "+playerScore+" — Computer "+cpuScore;
+
+ const box=document.getElementById("recapRows");
+ box.replaceChildren();
+
+ const heading=document.createElement("div");
+ heading.className="recaprow";
+ heading.innerHTML="<strong>Categoria</strong><strong>Tu / Computer</strong>";
+ box.appendChild(heading);
+
+ for(let i=0;i<pRows.length;i++){
+  const a=pRows[i],b=cRows[i];
+  const row=document.createElement("div");
+  row.className="recaprow";
+
+  const name=document.createElement("span");
+  name.textContent=a.name;
+
+  const points=document.createElement("strong");
+  points.textContent=a.point+" / "+b.point;
+
+  const detail=document.createElement("div");
+  detail.style.cssText="font-size:11px;color:#d9cba9;text-align:left;margin-top:3px;width:100%";
+  detail.textContent="Tu: "+a.detail+" · Computer: "+b.detail;
+
+  const wrap=document.createElement("div");
+  wrap.style.width="100%";
+  wrap.append(name,detail);
+  row.replaceChildren(wrap,points);
+  box.appendChild(row);
+ }
+
+ const total=document.createElement("div");
+ total.className="recaprow";
+ total.innerHTML="<strong>Punti della mano</strong><strong>"+p+" / "+c+"</strong>";
+ box.appendChild(total);
+
+ document.getElementById("continueButton").textContent=gameOver?"Nuova partita":"Continua";
+ document.getElementById("modal").classList.remove("hidden");
+ say(gameOver?title:"Mano terminata. Controlla il riepilogo dei punti.");
+}
+
+function continueGame(){
+ document.getElementById("modal").classList.add("hidden");
+ if(lastRecap&&lastRecap.gameOver)newGame();
+ else startHand();
+}
+
+function sendChat(){
+ const input=document.getElementById("chatInput");
+ const value=input.value.trim();
+ if(!value)return;
+
+ const log=document.getElementById("chatlog");
+ if(log.textContent.includes("Benvenuto al tavolo!"))log.replaceChildren();
+
+ const line=document.createElement("div");
+ line.textContent="Tu: "+value;
+ log.appendChild(line);
+ log.scrollTop=log.scrollHeight;
+ input.value="";
+}
+
+document.getElementById("chatInput").addEventListener("keydown",e=>{
+ if(e.key==="Enter")sendChat();
+});
+
+newGame();
+</script>
+ 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+window.scopaSupabase = window.supabase.createClient(
+  'https://sommziqnmxgkwyjatxcn.supabase.co',
+  'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C'
+);
+</script>
+
+</body>
+</html>
