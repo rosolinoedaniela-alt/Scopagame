@@ -228,4 +228,89 @@ function render() {
 
   // Avversario (dorsi)
   if (gameState.player2_hand) {
-    gameState.player2_hand.forEach
+    gameState.player2_hand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
+  }
+
+  if (gameState.deck) {
+    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+  }
+
+  document.getElementById("score").textContent = `Punti - G1: ${gameState.player1_score}/11 | G2: ${gameState.player2_score}/11`;
+  document.getElementById("play").disabled = !isMyTurn || selectedCardId === null;
+}
+
+// 2. Gestione rigida dei turni uno alla volta (Punto 1)
+function playPlayerCard() {
+  if (selectedCardId === null || gameState.turn !== 'player1') return;
+  
+  const hand = [...(gameState.player1_hand || [])];
+  const card = hand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  gameState.board_cards.push(card);
+
+  // 4. Festeggiamento per la Scopa (Punto 4)
+  if(gameState.board_cards.length === 1) {
+    triggerPartyAnimation();
+    gameState.player1_score += 1;
+  }
+
+  selectedCardId = null;
+  gameState.turn = 'player2'; // Passa il turno all'avversario
+  saveProgress(); // 3. Salvataggio e persistenza progressi (Punto 3)
+  render();
+  checkWinCondition();
+
+  // Simulazione mossa automatica dell'avversario dopo 2 secondi (per testare facilmente la turnazione)
+  if (gameState.player2_hand && gameState.player2_hand.length > 0) {
+    setTimeout(() => {
+      if(gameState.turn === 'player2') {
+        const oppCard = gameState.player2_hand.pop();
+        gameState.board_cards.push(oppCard);
+        gameState.turn = 'player1';
+        saveProgress();
+        render();
+        checkWinCondition();
+      }
+    }, 2000);
+  }
+}
+
+function triggerPartyAnimation() {
+  const overlay = document.getElementById("partyOverlay");
+  overlay.style.display = "flex";
+  setTimeout(() => { overlay.style.display = "none"; }, 2000);
+}
+
+// 5. Chiusura automatica a 11 punti (Punto 5)
+function checkWinCondition() {
+  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
+    let winner = gameState.player1_score >= 11 ? 'Giocatore 1' : 'Giocatore 2';
+    document.getElementById("message").textContent = `🏆 Partita terminata! Vinto da ${winner}!`;
+    localStorage.removeItem('scopa_gamestate_v1'); // Pulisce a fine partita
+    setTimeout(() => { try { tg.close(); } catch(e) {} }, 4000);
+  }
+}
+
+// 6. Chat e Spettatori (Punto 6)
+function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+  const log = document.getElementById("chatlog");
+  const line = document.createElement("div");
+  line.innerHTML = "<b>" + userName + ":</b> " + val;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
+}
+
+window.addEventListener('DOMContentLoaded', () => { initGame(); });
+</script>
+</body>
+</html>
