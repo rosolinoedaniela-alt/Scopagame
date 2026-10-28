@@ -35,7 +35,6 @@ main {
 
 .label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
 
-/* TAVOLO A DUE FILE: CARTE GRANDI E ORDINATE */
 .area {
  display:flex; justify-content:center; align-items:center; gap:4px;
  flex-wrap:nowrap; min-height:48px; width:100%; padding:2px;
@@ -63,7 +62,6 @@ main {
 
 #remaining { position:absolute; top:2px; right:4px; padding:1px 3px; border:1px solid var(--gold); border-radius:3px; background:#042116; color:#ffe7a7; font-size:7px; font-weight:bold; z-index:5; }
 
-/* Dimensioni piene e grandi per le carte */
 .card {
  width:clamp(40px, 12vw, 48px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
  background:#fff8e9; border:2px solid #e6d5a7; border-radius:5px; cursor:pointer; transition:transform .15s; box-shadow:0 2px 4px rgba(0,0,0,0.3);
@@ -92,6 +90,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 #partyOverlay h2 { font-size: 24px; margin: 0; text-shadow: 0 0 10px #ffdf76; animation: bounce 0.5s infinite alternate; }
 @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -105,7 +104,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Punti - G1: 0/11 | G2: 0/11</div>
- <div id="connectionStatus">Partita PvP Reale</div>
+ <div id="connectionStatus">Connessione in tempo reale...</div>
 </header>
 
 <main>
@@ -128,7 +127,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   </div>
  </section>
 
- <div id="message" aria-live="polite">Partita pronta! Seleziona una carta.</div>
+ <div id="message" aria-live="polite">Partita pronta!</div>
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO & SPETTATORI</div>
@@ -143,15 +142,26 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <footer>Scopa Napoletana · Monopolygoita</footer>
 
 <script>
+const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
+let supabase = null;
+try { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
+
 const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
-const userName = user ? (user.first_name || 'Giocatore') : 'Giocatore';
+const userId = user ? String(user.id) : 'guest_' + Math.floor(Math.random()*1000);
+const userName = user ? (user.first_name || 'Giocatore') : 'Ospite';
 
-let savedState = localStorage.getItem('scopa_real_pvp_v3');
-let gameState = savedState ? JSON.parse(savedState) : {
+let roomId = new URLSearchParams(window.location.search).get('room') || 'stanza_principale';
+let myRole = 'spectator';
+let gameState = {
   board_cards: [],
+  player1_id: null,
+  player1_name: 'Giocatore 1',
+  player2_id: null,
+  player2_name: 'Giocatore 2',
   player1_hand: [],
   player2_hand: [],
   player1_score: 0,
@@ -159,7 +169,6 @@ let gameState = savedState ? JSON.parse(savedState) : {
   turn: 'player1',
   deck: []
 };
-
 let selectedCardId = null;
 
 const files = [
@@ -184,23 +193,71 @@ function imageURL(c){
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
-function initGame() {
-  if (!gameState.board_cards || gameState.board_cards.length === 0 || (!gameState.player1_hand.length && !gameState.player2_hand.length)) {
-    const deck = makeDeck();
-    gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-    gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-    gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-    gameState.player1_score = 0;
-    gameState.player2_score = 0;
-    gameState.turn = 'player1';
-    gameState.deck = deck;
-    saveProgress();
+async function initOrJoinRoom() {
+  if(!supabase) {
+    document.getElementById("connectionStatus").textContent = "Errore Connessione Online";
+    return;
   }
+
+  let { data, error } = await supabase.from('scopa_rooms').select('*').eq('room_id', roomId).single();
+  
+  if(!data) {
+    const deck = makeDeck();
+    const initialBoard = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
+    const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
+    
+    const newRoom = {
+      room_id: roomId,
+      board_cards: initialBoard,
+      player1_id: userId,
+      player1_name: userName,
+      player1_hand: p1Hand,
+      player2_id: null,
+      player2_name: null,
+      player2_hand: p2Hand,
+      player1_score: 0,
+      player2_score: 0,
+      turn: 'player1',
+      deck: deck
+    };
+    await supabase.from('scopa_rooms').insert([newRoom]);
+    gameState = newRoom;
+    myRole = 'player1';
+  } else {
+    gameState = data;
+    if(gameState.player1_id === userId) {
+      myRole = 'player1';
+    } else if(gameState.player2_id === userId) {
+      myRole = 'player2';
+    } else if(!gameState.player2_id) {
+      gameState.player2_id = userId;
+      gameState.player2_name = userName;
+      await supabase.from('scopa_rooms').update({
+        player2_id: userId,
+        player2_name: userName
+      }).eq('room_id', roomId);
+      gameState.player2_name = userName;
+      myRole = 'player2';
+    } else {
+      myRole = 'spectator';
+    }
+  }
+
+  document.getElementById("connectionStatus").textContent = "Connesso · Ruolo: " + (myRole === 'spectator' ? 'Spettatore 👁️' : (myRole === 'player1' ? 'Giocatore 1 (Tu)' : 'Giocatore 2 (Tu)'));
   render();
+  subscribeRealtime();
 }
 
-function saveProgress() {
-  localStorage.setItem('scopa_real_pvp_v3', JSON.stringify(gameState));
+function subscribeRealtime() {
+  if(!supabase) return;
+  supabase.channel('room-sync-' + roomId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${roomId}` }, payload => {
+      gameState = payload.new;
+      render();
+      checkWinCondition();
+    })
+    .subscribe();
 }
 
 function render() {
@@ -214,20 +271,21 @@ function render() {
   tContainer.replaceChildren();
   oArea.replaceChildren();
 
-  const isMyTurn = (gameState.turn === 'player1');
-  if (isMyTurn) {
+  const isMyTurn = (myRole === 'player1' && gameState.turn === 'player1') || (myRole === 'player2' && gameState.turn === 'player2');
+  
+  if (isMyTurn && myRole !== 'spectator') {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
     document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (È IL TUO TURNO!) ✦";
-    document.getElementById("opponentLabel").textContent = "AVVERSARIO REALE (IN ATTESA)";
+    document.getElementById("opponentLabel").textContent = "AVVERSARIO (" + (myRole === 'player1' ? (gameState.player2_name || 'In attesa...') : (gameState.player1_name || 'In attesa...')) + ")";
   } else {
     pPanel.classList.remove('active-turn');
     oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI TURNO AVVERSARIO)";
-    document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO REALE ✦";
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (ATTENDI IL TURNO)";
+    document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO ✦";
   }
 
-  // Dividi le carte del tavolo in due file (fino a 5 carte per fila)
+  // Tavolo a due file
   if (gameState.board_cards) {
     const row1Cards = gameState.board_cards.slice(0, 5);
     const row2Cards = gameState.board_cards.slice(5);
@@ -255,13 +313,14 @@ function render() {
     }
   }
 
-  // Mano giocatore
-  if (gameState.player1_hand) {
-    gameState.player1_hand.forEach(c => {
+  // Mano del giocatore corrente (basata sul ruolo reale)
+  let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
+  if (myHand && myRole !== 'spectator') {
+    myHand.forEach(c => {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
       im.src = imageURL(c);
-      if (isMyTurn) {
+      if(isMyTurn) {
         im.onclick = () => { selectedCardId = c.id; render(); };
       }
       pArea.appendChild(im);
@@ -269,8 +328,9 @@ function render() {
   }
 
   // Avversario (dorsi)
-  if (gameState.player2_hand) {
-    gameState.player2_hand.forEach(() => {
+  let oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
+  if (oppHand) {
+    oppHand.forEach(() => {
       const b = document.createElement("div");
       b.className = "card back";
       oArea.appendChild(b);
@@ -278,31 +338,45 @@ function render() {
   }
 
   if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+    document.getElementById("remaining").textContent = "🂠 " + (Array.isArray(gameState.deck) ? gameState.deck.length : '--');
   }
 
-  document.getElementById("score").textContent = `Punti - G1: ${gameState.player1_score}/11 | G2: ${gameState.player2_score}/11`;
-  document.getElementById("play").disabled = !isMyTurn || selectedCardId === null;
+  document.getElementById("score").textContent = `Punti - ${gameState.player1_name || 'G1'}: ${gameState.player1_score || 0}/11 | ${gameState.player2_name || 'G2'}: ${gameState.player2_score || 0}/11`;
+  document.getElementById("play").disabled = !isMyTurn || selectedCardId === null || myRole === 'spectator';
 }
 
-function playPlayerCard() {
-  if (selectedCardId === null || gameState.turn !== 'player1') return;
+async function playPlayerCard() {
+  if (selectedCardId === null) return;
   
-  const hand = [...(gameState.player1_hand || [])];
+  let handKey = myRole === 'player2' ? 'player2_hand' : 'player1_hand';
+  let hand = [...(gameState[handKey] || [])];
   const card = hand.find(c => c.id === selectedCardId);
   if (!card) return;
 
-  gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  gameState[handKey] = hand.filter(c => c.id !== card.id);
   gameState.board_cards.push(card);
 
-  if(gameState.board_cards.length === 1) {
+  let isScopa = gameState.board_cards.length === 1;
+  if(isScopa) {
     triggerPartyAnimation();
-    gameState.player1_score += 1;
+    if(myRole === 'player1') gameState.player1_score += 1;
+    else gameState.player2_score += 1;
   }
 
+  gameState.turn = (gameState.turn === 'player1') ? 'player2' : 'player1';
   selectedCardId = null;
-  gameState.turn = 'player2'; // Si ferma e aspetta l'avversario reale
-  saveProgress();
+
+  if(supabase) {
+    await supabase.from('scopa_rooms').update({
+      board_cards: gameState.board_cards,
+      player1_hand: gameState.player1_hand,
+      player2_hand: gameState.player2_hand,
+      player1_score: gameState.player1_score,
+      player2_score: gameState.player2_score,
+      turn: gameState.turn
+    }).eq('room_id', roomId);
+  }
+
   render();
   checkWinCondition();
 }
@@ -314,10 +388,9 @@ function triggerPartyAnimation() {
 }
 
 function checkWinCondition() {
-  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
-    let winner = gameState.player1_score >= 11 ? 'Giocatore 1' : 'Giocatore 2';
+  if ((gameState.player1_score || 0) >= 11 || (gameState.player2_score || 0) >= 11) {
+    let winner = gameState.player1_score >= 11 ? (gameState.player1_name || 'Giocatore 1') : (gameState.player2_name || 'Giocatore 2');
     document.getElementById("message").textContent = `🏆 Partita terminata! Vinto da ${winner}!`;
-    localStorage.removeItem('scopa_real_pvp_v3');
     setTimeout(() => { try { tg.close(); } catch(e) {} }, 4000);
   }
 }
@@ -328,13 +401,13 @@ function sendChat() {
   if(!val) return;
   const log = document.getElementById("chatlog");
   const line = document.createElement("div");
-  line.innerHTML = "<b>" + userName + ":</b> " + val;
+  line.innerHTML = `<b>${userName}:</b> ${val}`;
   log.appendChild(line);
   log.scrollTop = log.scrollHeight;
   input.value = "";
 }
 
-window.addEventListener('DOMContentLoaded', () => { initGame(); });
+window.addEventListener('DOMContentLoaded', () => { initOrJoinRoom(); });
 </script>
 </body>
 </html>
