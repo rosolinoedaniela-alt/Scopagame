@@ -140,7 +140,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button onclick="initRoom()" style="background:linear-gradient(135deg,#73a985,#22543d); color:#fff; border-color:#93c5ae;">Aggiorna Stato</button>
+   <button onclick="resetRoomForce()" style="background:linear-gradient(135deg,#c53030,#9b2c2c); color:#fff; border-color:#feb2b2;">Nuova Partita</button>
   </div>
  </section>
 
@@ -163,9 +163,7 @@ try { if (tg.expand) tg.expand(); } catch(e){}
 const user = tg.initDataUnsafe?.user;
 const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Ospite';
 
-const OWNER_USERNAME = '@Daniela83Divaa'; 
 const ROOM_ID = 'stanza_principale';
-
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
 const SUPABASE_KEY = 'Sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
 
@@ -206,38 +204,43 @@ async function initRoom() {
     .eq('room_id', ROOM_ID)
     .single();
 
-  if (error || !data) {
-    const deck = makeDeck();
-    const newGame = {
-      room_id: ROOM_ID,
-      board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
-      player1_id: null,
-      player2_id: null,
-      player1_hand: [deck.pop(), deck.pop(), deck.pop()],
-      player2_hand: [deck.pop(), deck.pop(), deck.pop()],
-      player1_score: 0,
-      player2_score: 0,
-      player1_captured: [],
-      player2_captured: [],
-      player1_scope: 0,
-      player2_scope: 0,
-      turn: 'player1',
-      deck: deck,
-      chat: []
-    };
-    await supabaseClient.from('scopa_rooms').upsert(newGame);
-    gameState = newGame;
+  if (error || !data || !data.board_cards || !data.player1_hand || !data.player2_hand) {
+    await resetRoomForce();
   } else {
     gameState = data;
     if (!gameState.player1_captured) gameState.player1_captured = [];
     if (!gameState.player2_captured) gameState.player2_captured = [];
     if (!gameState.player1_scope) gameState.player1_scope = 0;
     if (!gameState.player2_scope) gameState.player2_scope = 0;
+    checkLobby();
+    render();
   }
-  
+  subscribeRealtime();
+}
+
+async function resetRoomForce() {
+  const deck = makeDeck();
+  const newGame = {
+    room_id: ROOM_ID,
+    board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
+    player1_id: null,
+    player2_id: null,
+    player1_hand: [deck.pop(), deck.pop(), deck.pop()],
+    player2_hand: [deck.pop(), deck.pop(), deck.pop()],
+    player1_score: 0,
+    player2_score: 0,
+    player1_captured: [],
+    player2_captured: [],
+    player1_scope: 0,
+    player2_scope: 0,
+    turn: 'player1',
+    deck: deck,
+    chat: []
+  };
+  await supabaseClient.from('scopa_rooms').upsert(newGame);
+  gameState = newGame;
   checkLobby();
   render();
-  subscribeRealtime();
 }
 
 function checkLobby() {
@@ -265,11 +268,13 @@ async function joinAs(role) {
 
 function subscribeRealtime() {
   supabaseClient
-    .channel('public:scopa_rooms_v2')
+    .channel('public:scopa_rooms_v3')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
-      gameState = payload.new;
-      checkLobby();
-      render();
+      if(payload.new) {
+        gameState = payload.new;
+        checkLobby();
+        render();
+      }
     })
     .subscribe();
 }
@@ -372,208 +377,4 @@ function render() {
 
   if (isMyTurn && myRole !== 'none') {
     pPanel.classList.add('active-turn');
-    oPanel.classList.remove('active-turn');
-    document.getElementById("myRoleLabel").textContent = `LE TUE CARTE: ${activePlayerName} (${activePlayerScore} pt) - È IL TUO TURNO!`;
-  } else {
-    pPanel.classList.remove('active-turn');
-    oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = `LE TUE CARTE: ${activePlayerName} (${activePlayerScore} pt)` + (myRole === 'none' ? " - SCEGLI IL POSTO" : " - ATTENDI IL TURNO");
-  }
-
-  if (gameState.board_cards) {
-    const row1 = gameState.board_cards.slice(0, 5);
-    const row2 = gameState.board_cards.slice(5);
-
-    const r1 = document.createElement("div");
-    r1.className = "table-row";
-    row1.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card";
-      im.src = imageURL(c);
-      r1.appendChild(im);
-    });
-    tContainer.appendChild(r1);
-
-    if (row2.length > 0) {
-      const r2 = document.createElement("div");
-      r2.className = "table-row";
-      row2.forEach(c => {
-        const im = document.createElement("img");
-        im.className = "card";
-        im.src = imageURL(c);
-        r2.appendChild(im);
-      });
-      tContainer.appendChild(r2);
-    }
-  }
-
-  const myHand = myRole === 'player2' ? gameState.player2_hand : (myRole === 'player1' ? gameState.player1_hand : null);
-  if (myHand && myRole !== 'none') {
-    myHand.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
-      im.src = imageURL(c);
-      if(isMyTurn) {
-        im.onclick = () => { selectedCardId = c.id; render(); };
-      }
-      pArea.appendChild(im);
-    });
-  } else {
-    const info = document.createElement("div");
-    info.style.fontSize = "8px";
-    info.style.color = "#ffe7a7";
-    info.textContent = "Usa il menu iniziale per sederti e partecipare alla partita.";
-    pArea.appendChild(info);
-  }
-
-  const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
-  if (oppHand) {
-    oppHand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
-  }
-
-  document.getElementById("play").disabled = (myRole === 'none') || !isMyTurn || selectedCardId === null;
-
-  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
-    const winnerName = gameState.player1_score >= 11 ? p1Name : p2Name;
-    document.getElementById("winnerText").textContent = winnerName + " ha vinto la partita!";
-    document.getElementById("finalScore").textContent = `${p1Name}: ${gameState.player1_score} pt | ${p2Name}: ${gameState.player2_score} pt`;
-    document.getElementById("winOverlay").style.display = "flex";
-    
-    setTimeout(async () => {
-      if(userName === OWNER_USERNAME) {
-        const deck = makeDeck();
-        gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-        gameState.player1_id = null;
-        gameState.player2_id = null;
-        gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-        gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-        gameState.player1_score = 0;
-        gameState.player2_score = 0;
-        gameState.player1_captured = [];
-        gameState.player2_captured = [];
-        gameState.player1_scope = 0;
-        gameState.player2_scope = 0;
-        gameState.turn = 'player1';
-        gameState.deck = deck;
-        await updateRemoteState();
-      }
-      document.getElementById("winOverlay").style.display = "none";
-    }, 5000);
-  }
-
-  if (gameState.chat) {
-    const log = document.getElementById("chatlog");
-    log.replaceChildren();
-    gameState.chat.forEach(msg => {
-      const line = document.createElement("div");
-      line.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
-      log.appendChild(line);
-    });
-    log.scrollTop = log.scrollHeight;
-  }
-}
-
-async function playPlayerCard() {
-  let myRole = (userName === gameState.player2_id) ? 'player2' : 'player1';
-  if (myRole === 'none' || selectedCardId === null) return;
-  if (gameState.turn !== myRole) return;
-
-  let hand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  const card = hand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  if (myRole === 'player2') {
-    gameState.player2_hand = hand.filter(c => c.id !== card.id);
-  } else {
-    gameState.player1_hand = hand.filter(c => c.id !== card.id);
-  }
-
-  let matchIndices = findCapture(card, gameState.board_cards);
-  if (matchIndices && matchIndices.length > 0) {
-    let captured = [card];
-    matchIndices.sort((a, b) => b - a);
-    matchIndices.forEach(idx => {
-      captured.push(gameState.board_cards.splice(idx, 1)[0]);
-    });
-
-    if (myRole === 'player1') {
-      gameState.player1_captured = (gameState.player1_captured || []).concat(captured);
-      if (gameState.board_cards.length === 0) {
-        gameState.player1_scope = (gameState.player1_scope || 0) + 1;
-        triggerPartyAnimation();
-      }
-    } else {
-      gameState.player2_captured = (gameState.player2_captured || []).concat(captured);
-      if (gameState.board_cards.length === 0) {
-        gameState.player2_scope = (gameState.player2_scope || 0) + 1;
-        triggerPartyAnimation();
-      }
-    }
-  } else {
-    gameState.board_cards.push(card);
-  }
-
-  let p1H = gameState.player1_hand || [];
-  let p2H = gameState.player2_hand || [];
-  if (p1H.length === 0 && p2H.length === 0) {
-    if (gameState.deck && gameState.deck.length > 0) {
-      gameState.player1_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
-      gameState.player2_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
-    } else {
-      calculateHandPoints();
-      const deck = makeDeck();
-      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-      gameState.player1_captured = [];
-      gameState.player2_captured = [];
-      gameState.player1_scope = 0;
-      gameState.player2_scope = 0;
-      gameState.deck = deck;
-    }
-  }
-
-  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
-  selectedCardId = null;
-
-  await updateRemoteState();
-  render();
-}
-
-function triggerPartyAnimation() {
-  const overlay = document.getElementById("partyOverlay");
-  overlay.style.display = "flex";
-  setTimeout(() => { overlay.style.display = "none"; }, 2000);
-}
-
-async function sendChat() {
-  const input = document.getElementById("chatInput");
-  const val = input.value.trim();
-  if(!val) return;
-
-  if(!gameState.chat) gameState.chat = [];
-  gameState.chat.push({ user: userName, text: val });
-  if(gameState.chat.length > 30) gameState.chat.shift();
-
-  input.value = "";
-  await updateRemoteState();
-}
-
-document.getElementById('chatInput').addEventListener('keypress', function (e) {
-  if (e.key === 'Enter') {
-    sendChat();
-  }
-});
-
-window.addEventListener('DOMContentLoaded', () => { initRoom(); });
-</script>
-</body>
-</html>
+    oPanel
