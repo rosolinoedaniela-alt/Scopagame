@@ -74,7 +74,7 @@ main {
 }
 
 .action-row { display:flex; align-items:center; gap:6px; width:100%; justify-content:center; margin-top:1px; }
-button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 14px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
+button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 16px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
 button:disabled{opacity:0.4;cursor:not-allowed}
 
 #chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
@@ -235,9 +235,14 @@ async function initRoom() {
         gameState.spectators.push(userName);
         await updateRemoteState();
       }
-    } else if (!gameState.player2_id && gameState.player1_id !== userName) {
-      gameState.player2_id = userName;
-      await updateRemoteState();
+    } else {
+      if (!gameState.player1_id) {
+        gameState.player1_id = userName;
+        await updateRemoteState();
+      } else if (!gameState.player2_id && gameState.player1_id !== userName) {
+        gameState.player2_id = userName;
+        await updateRemoteState();
+      }
     }
   }
   
@@ -273,7 +278,8 @@ function render() {
 
   let myRole = 'player1';
   if (userName === gameState.player2_id) myRole = 'player2';
-  else if (isSpectator || (gameState.player1_id && gameState.player2_id && gameState.player1_id !== userName && gameState.player2_id !== userName)) {
+  else if (userName === gameState.player1_id) myRole = 'player1';
+  else if (isSpectator || (gameState.player1_id && gameState.player2_id)) {
     isSpectator = true;
     myRole = 'spectator';
   }
@@ -355,13 +361,12 @@ function render() {
     document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
   }
 
-  // Aggiornamento punteggio dinamico corretto
   const p1Name = gameState.player1_id || 'P1';
-  const p2Name = gameState.player2_id || 'In attesa...';
+  const p2Name = gameState.player2_id || 'P2';
   document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score} | ${p2Name}: ${gameState.player2_score}`;
   document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 
-  // Chat
+  // Chat in tempo reale sincronizzata
   if (gameState.chat) {
     const log = document.getElementById("chatlog");
     log.replaceChildren();
@@ -417,11 +422,18 @@ async function sendChat() {
 
   if(!gameState.chat) gameState.chat = [];
   gameState.chat.push({ user: userName, text: val });
-  if(gameState.chat.length > 20) gameState.chat.shift();
+  if(gameState.chat.length > 30) gameState.chat.shift();
 
   input.value = "";
   await updateRemoteState();
 }
+
+// Invia premendo INVIO da tastiera
+document.getElementById('chatInput').addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') {
+    sendChat();
+  }
+});
 
 window.addEventListener('DOMContentLoaded', () => { initRoom(); });
 </script>
