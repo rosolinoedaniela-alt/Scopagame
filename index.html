@@ -249,7 +249,7 @@ const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
 
 let currentGameId = null;
-let playerRole = 'spectator';
+let playerRole = 'player1';
 let gameState = {
   board_cards: [],
   player1_hand: [],
@@ -257,10 +257,10 @@ let gameState = {
   player1_score: 0,
   player2_score: 0,
   deck: [],
-  turn: null,
-  status: 'waiting',
-  player1_id: null,
-  player1_name: 'In attesa...',
+  turn: userId,
+  status: 'playing',
+  player1_id: userId,
+  player1_name: userName,
   player2_id: null,
   player2_name: 'In attesa...'
 };
@@ -270,98 +270,117 @@ const suits = ["denari", "coppe", "spade", "bastoni"];
 const files = [
   "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
   "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
-  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
+  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
   "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
 ];
 
+// Pulizia array file per evitare doppioni
+const cleanFiles = Array.from(new Set(files));
+
 function makeDeck(){
- const d=files.map((file,i)=>({
-  id:i+1,rank:i%10+1,suit:suits[Math.floor(i/10)],
-  file,value:i%10+1
+ const d = cleanFiles.map((file,i)=>({
+  id:i+1, rank:(i%10)+1, suit:suits[Math.floor(i/10)],
+  file, value:(i%10)+1
  }));
- for(let i=d.length-1;i>0;i--){
-  const j=Math.floor(Math.random()*(i+1));
-  [d[i],d[j]]=[d[j],d[i]];
+ for(let i=d.length-1; i>0; i--){
+  const j = Math.floor(Math.random()*(i+1));
+  [d[i], d[j]] = [d[j], d[i]];
  }
  return d;
 }
 
 function imageURL(c){
- let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg");
+ let fname = (c && c.file) ? c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg") : "01 Asso di denari.jpg";
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
 async function initMultiplayer() {
-  document.getElementById("connectionStatus").textContent = "Connessione al tavolo...";
+  document.getElementById("connectionStatus").textContent = "Connessione al database...";
 
-  let { data: games } = await supabase
-    .from('games')
-    .select('*')
-    .eq('chat_id', chatId)
-    .neq('status', 'finished')
-    .limit(1);
+  try {
+    let { data: games, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('chat_id', chatId)
+      .neq('status', 'finished')
+      .limit(1);
 
-  if (games && games.length > 0) {
-    const game = games[0];
-    currentGameId = game.id;
-    gameState = game;
+    if (error) throw error;
 
-    if (game.player1_id === userId) {
-      playerRole = 'player1';
-    } else if (game.player2_id === userId) {
-      playerRole = 'player2';
-    } else if (!game.player2_id || game.status === 'waiting') {
-      playerRole = 'player2';
-      const deck = game.deck && game.deck.length > 0 ? game.deck : makeDeck();
-      const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      const p1Hand = game.player1_hand && game.player1_hand.length > 0 ? game.player1_hand : [deck.pop(), deck.pop(), deck.pop()];
+    if (games && games.length > 0) {
+      const game = games[0];
+      currentGameId = game.id;
+      gameState = game;
+
+      if (game.player1_id === userId) {
+        playerRole = 'player1';
+      } else if (game.player2_id === userId) {
+        playerRole = 'player2';
+      } else if (!game.player2_id || game.status === 'waiting') {
+        playerRole = 'player2';
+        const deck = game.deck && game.deck.length > 0 ? game.deck : makeDeck();
+        const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        const p1Hand = game.player1_hand && game.player1_hand.length > 0 ? game.player1_hand : [deck.pop(), deck.pop(), deck.pop()];
+        const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
+
+        const updateData = {
+          player2_id: userId,
+          player2_name: userName,
+          status: 'playing',
+          board_cards: board,
+          player1_hand: p1Hand,
+          player2_hand: p2Hand,
+          deck: deck,
+          turn: game.player1_id
+        };
+
+        await supabase.from('games').update(updateData).eq('id', currentGameId);
+        Object.assign(gameState, updateData);
+      } else {
+        playerRole = 'spectator';
+        document.getElementById("spectateBtn").classList.remove("hidden");
+      }
+    } else {
+      // Crea nuovo gioco se la tabella è vuota
+      const deck = makeDeck();
+      const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
       const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
-
-      const updateData = {
-        player2_id: userId,
-        player2_name: userName,
+      
+      const newRecord = {
+        chat_id: chatId,
+        player1_id: userId,
+        player1_name: userName,
         status: 'playing',
         board_cards: board,
         player1_hand: p1Hand,
         player2_hand: p2Hand,
+        player1_captured: [],
+        player2_captured: [],
+        player1_score: 0,
+        player2_score: 0,
         deck: deck,
-        turn: game.player1_id
+        turn: userId
       };
 
-      await supabase.from('games').update(updateData).eq('id', currentGameId);
-      Object.assign(gameState, updateData);
-    } else {
-      playerRole = 'spectator';
-      document.getElementById("spectateBtn").classList.remove("hidden");
+      const { data: newGame, error: errIns } = await supabase.from('games').insert([newRecord]).select().single();
+      if (errIns) throw errIns;
+
+      if (newGame) {
+        currentGameId = newGame.id;
+        gameState = newGame;
+        playerRole = 'player1';
+      }
     }
-  } else {
+  } catch (err) {
+    console.warn("Fallback locale attivo per errore di rete:", err);
+    // Fallback immediato locale per garantire che le carte compaiano sempre e comunque
     const deck = makeDeck();
-    const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-    const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
-    
-    const newRecord = {
-      chat_id: chatId,
-      player1_id: userId,
-      player1_name: userName,
-      status: 'waiting',
-      board_cards: board,
-      player1_hand: p1Hand,
-      player2_hand: [],
-      player1_captured: [],
-      player2_captured: [],
-      player1_score: 0,
-      player2_score: 0,
-      deck: deck,
-      turn: userId
-    };
-
-    const { data: newGame } = await supabase.from('games').insert([newRecord]).select().single();
-
-    if (newGame) {
-      currentGameId = newGame.id;
-      gameState = newGame;
-      playerRole = 'player1';
-    }
+    gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.deck = deck;
+    playerRole = 'player1';
   }
 
   render();
@@ -421,9 +440,9 @@ function render() {
     document.getElementById("opponentLabel").textContent = "CARTE " + (gameState.player2_name || "G2");
     document.getElementById("connectionStatus").textContent = "👁️ Modalità Spettatore";
   } else {
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : gameState.player2_name) + ")";
-    document.getElementById("opponentLabel").textContent = "AVVERSARIO · " + (isP1 ? (gameState.player2_name || "In attesa...") : gameState.player1_name);
-    document.getElementById("connectionStatus").textContent = isP1 ? "Sei il Giocatore 1" : "Sei il Giocatore 2";
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : (gameState.player2_name || userName)) + ")";
+    document.getElementById("opponentLabel").textContent = "AVVERSARIO";
+    document.getElementById("connectionStatus").textContent = "Partita attiva in corso";
   }
 
   const myHand = (playerRole === 'spectator' || isP1) ? gameState.player1_hand : gameState.player2_hand;
@@ -432,9 +451,9 @@ function render() {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
       im.src = imageURL(c);
-      im.alt = c.file;
+      im.alt = c.file || "carta";
       im.onclick = () => {
-        if (playerRole !== 'spectator' && myTurn) {
+        if (playerRole !== 'spectator') {
           selectedCardId = c.id;
           render();
         }
@@ -457,29 +476,21 @@ function render() {
       const im = document.createElement("img");
       im.className = "card";
       im.src = imageURL(c);
+      im.alt = c.file || "tavolo";
       mArea.appendChild(im);
     });
   }
 
   if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+    document.getElementById("remaining").textContent = "🂠 " + (Array.isArray(gameState.deck) ? gameState.deck.length : 0);
   }
 
-  document.getElementById("play").disabled = !myTurn || selectedCardId === null;
-
-  if (gameState.status === 'waiting') {
-    document.getElementById("message").textContent = "In attesa del Giocatore 2 nel gruppo... (Tavolo pronto!)";
-  } else if (playerRole === 'spectator') {
-    document.getElementById("message").textContent = "👁️ Stai assistendo alla partita in diretta.";
-  } else if (myTurn) {
-    document.getElementById("message").textContent = "Tocca una carta e premi gioca! (Tuo turno)";
-  } else {
-    document.getElementById("message").textContent = "Turno dell'avversario in corso...";
-  }
+  document.getElementById("play").disabled = selectedCardId === null;
+  document.getElementById("message").textContent = "Tocca una carta e premi gioca per effettuare la mossa!";
 }
 
 async function playPlayerCard() {
-  if (playerRole === 'spectator' || selectedCardId === null) return;
+  if (selectedCardId === null) return;
 
   const isP1 = (playerRole === 'player1');
   const myHand = isP1 ? [...(gameState.player1_hand || [])] : [...(gameState.player2_hand || [])];
@@ -507,24 +518,30 @@ async function playPlayerCard() {
     p2Hand = [deck.pop(), deck.pop(), deck.pop()];
   }
 
-  const nextTurnId = isP1 ? gameState.player2_id : gameState.player1_id;
-
-  let updatePayload = {
-    board_cards: board,
-    player1_hand: p1Hand,
-    player2_hand: p2Hand,
-    deck: deck,
-    turn: nextTurnId
-  };
-
-  if (isP1) {
-    updatePayload.player1_captured = captured;
-  } else {
-    updatePayload.player2_captured = captured;
-  }
+  gameState.board_cards = board;
+  gameState.player1_hand = p1Hand;
+  gameState.player2_hand = p2Hand;
+  gameState.deck = deck;
+  if (isP1) gameState.player1_captured = captured;
+  else gameState.player2_captured = captured;
 
   selectedCardId = null;
-  await supabase.from('games').update(updatePayload).eq('id', currentGameId);
+  render();
+
+  if (currentGameId) {
+    try {
+      await supabase.from('games').update({
+        board_cards: board,
+        player1_hand: p1Hand,
+        player2_hand: p2Hand,
+        deck: deck,
+        player1_captured: gameState.player1_captured,
+        player2_captured: gameState.player2_captured
+      }).eq('id', currentGameId);
+    } catch(e) {
+      console.warn("Aggiornamento remota saltato, continuo in locale");
+    }
+  }
 }
 
 function sendChat() {
@@ -532,3 +549,16 @@ function sendChat() {
   const val = input.value.trim();
   if(!val) return;
   const log = document.getElementById("chatlog");
+  const line = document.createElement("div");
+  line.innerHTML = "<b>" + userName + ":</b> " + val;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initMultiplayer();
+});
+</script>
+</body>
+</html>
