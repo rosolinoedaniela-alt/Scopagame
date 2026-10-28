@@ -113,7 +113,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="score">Punti - In attesa...</div>
+ <div id="score">Punti - Caricamento...</div>
  <div id="connectionStatus">Connessione online attiva</div>
 </header>
 
@@ -315,7 +315,7 @@ function render() {
   }
 
   // Tavolo a due file
-  if (gameState.board_cards) {
+  if (gameState.board_cards && gameState.board_cards.length > 0) {
     const row1Cards = gameState.board_cards.slice(0, 5);
     const row2Cards = gameState.board_cards.slice(5);
 
@@ -344,7 +344,7 @@ function render() {
 
   // Mano del giocatore o Spettatore
   let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  if (myHand && myRole !== 'spectator') {
+  if (myHand && myHand.length > 0 && myRole !== 'spectator') {
     myHand.forEach(c => {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
@@ -364,7 +364,7 @@ function render() {
 
   // Avversario (dorsi)
   let oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
-  if (oppHand && myRole !== 'spectator') {
+  if (oppHand && oppHand.length > 0 && myRole !== 'spectator') {
     oppHand.forEach(() => {
       const b = document.createElement("div");
       b.className = "card back";
