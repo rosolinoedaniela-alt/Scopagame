@@ -110,9 +110,10 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 
 <div id="winOverlay">
  <div class="win-box">
-  <h2>🏆 RISULTATO FINALE 🏆</h2>
+  <h2>🏆 VINCITORE FINALE 🏆</h2>
   <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
   <div id="finalScore" style="font-size:12px; color:var(--gold); margin-bottom:15px;"></div>
+  <p style="font-size:8px; color:#a3f7bf;">La stanza si riavvierà tra pochi secondi...</p>
  </div>
 </div>
 
@@ -291,7 +292,6 @@ function render() {
   const currentSpectators = gameState.spectators ? gameState.spectators.length : 0;
   document.getElementById("spectatorCountLabel").textContent = `💬 CHAT DELLA STANZA (Spettatori: ${currentSpectators}/3)`;
 
-  // Aggiornamento barra di stato in alto con i nomi in tempo reale
   const g1 = gameState.player1_id ? gameState.player1_id : 'In attesa...';
   const g2 = gameState.player2_id ? gameState.player2_id : 'In attesa...';
   document.getElementById("roomStatus").textContent = `Posti: G1 [${g1}] | G2 [${g2}]`;
@@ -306,7 +306,6 @@ function render() {
     document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + userName + (isSpectator ? " - SPETTATORE 👁️" : " - ATTENDI IL TURNO") + ")";
   }
 
-  // Tavolo
   if (gameState.board_cards) {
     const row1 = gameState.board_cards.slice(0, 5);
     const row2 = gameState.board_cards.slice(5);
@@ -334,7 +333,6 @@ function render() {
     }
   }
 
-  // Mano del giocatore
   const myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
   if (myHand && !isSpectator) {
     myHand.forEach(c => {
@@ -354,7 +352,6 @@ function render() {
     pArea.appendChild(info);
   }
 
-  // Avversario
   const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
   if (oppHand) {
     oppHand.forEach(() => {
@@ -373,7 +370,31 @@ function render() {
   document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score} | ${p2Name}: ${gameState.player2_score}`;
   document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 
-  // Chat
+  // Controllo se qualcuno ha raggiunto o superato 11 punti alla fine della mano
+  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
+    const winnerName = gameState.player1_score >= 11 ? p1Name : p2Name;
+    document.getElementById("winnerText").textContent = winnerName + " ha vinto la partita!";
+    document.getElementById("finalScore").textContent = `${p1Name}: ${gameState.player1_score} pt | ${p2Name}: ${gameState.player2_score} pt`;
+    document.getElementById("winOverlay").style.display = "flex";
+    
+    // Attende 5 secondi e poi resetta o chiude
+    setTimeout(async () => {
+      if(!isSpectator && userName === gameState.player1_id) {
+        // Resetta la stanza per una nuova partita
+        const deck = makeDeck();
+        gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+        gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+        gameState.player1_score = 0;
+        gameState.player2_score = 0;
+        gameState.turn = 'player1';
+        gameState.deck = deck;
+        await updateRemoteState();
+      }
+      document.getElementById("winOverlay").style.display = "none";
+    }, 5000);
+  }
+
   if (gameState.chat) {
     const log = document.getElementById("chatlog");
     log.replaceChildren();
