@@ -65,7 +65,6 @@ main {
  transition: all 0.3s ease;
 }
 
-/* ILLUMINAZIONE ROSSA DEL TURNO */
 .panel.active-turn {
  border: 2px solid #ff4d4d !important;
  box-shadow: 0 0 10px rgba(255, 77, 77, 0.7);
@@ -249,8 +248,8 @@ const userId = user ? user.id : Math.floor(Math.random() * 1000000);
 const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
 
-let currentGameId = localStorage.getItem('scopa_gameId_' + chatId) || null;
-let playerRole = localStorage.getItem('scopa_role_' + chatId) || 'spectator';
+let currentGameId = null;
+let playerRole = 'spectator';
 let gameState = {
   board_cards: [],
   player1_hand: [],
@@ -295,7 +294,7 @@ function imageURL(c){
 async function initMultiplayer() {
   document.getElementById("connectionStatus").textContent = "Connessione al tavolo...";
 
-  let { data: games } = await supabase
+  let { data: games, error } = await supabase
     .from('games')
     .select('*')
     .eq('chat_id', chatId)
@@ -307,12 +306,11 @@ async function initMultiplayer() {
     currentGameId = game.id;
     gameState = game;
 
-    // Riconoscimento persistente tramite salvataggio locale
     if (game.player1_id === userId) {
       playerRole = 'player1';
     } else if (game.player2_id === userId) {
       playerRole = 'player2';
-    } else if (playerRole !== 'spectator' && (!game.player2_id || game.status === 'waiting')) {
+    } else if (!game.player2_id || game.status === 'waiting') {
       playerRole = 'player2';
       const deck = game.deck && game.deck.length > 0 ? game.deck : makeDeck();
       const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
@@ -333,11 +331,9 @@ async function initMultiplayer() {
       await supabase.from('games').update(updateData).eq('id', currentGameId);
       Object.assign(gameState, updateData);
     } else {
-      // Tavolo pieno: mostra il tasto per entrare come spettatore
       document.getElementById("spectateBtn").classList.remove("hidden");
     }
   } else {
-    // Crea nuova stanza se non esiste
     const deck = makeDeck();
     const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
     const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
@@ -358,7 +354,7 @@ async function initMultiplayer() {
       turn: userId
     };
 
-    const { data: newGame } = await supabase.from('games').insert([newRecord]).select().single();
+    const { data: newGame, error: errIns } = await supabase.from('games').insert([newRecord]).select().single();
 
     if (newGame) {
       currentGameId = newGame.id;
@@ -367,19 +363,12 @@ async function initMultiplayer() {
     }
   }
 
-  // Salva stato in locale per la persistenza all'uscita/rientro
-  if (currentGameId) {
-    localStorage.setItem('scopa_gameId_' + chatId, currentGameId);
-    localStorage.setItem('scopa_role_' + chatId, playerRole);
-  }
-
   render();
   subscribeRealtime();
 }
 
 function joinAsSpectator() {
   playerRole = 'spectator';
-  localStorage.setItem('scopa_role_' + chatId, 'spectator');
   document.getElementById("spectateBtn").classList.add("hidden");
   document.getElementById("connectionStatus").textContent = "👁️ Entrato come Spettatore";
   render();
@@ -410,7 +399,6 @@ function render() {
   const isP1 = (playerRole === 'player1');
   const myTurn = (gameState.turn === userId && gameState.status === 'playing' && playerRole !== 'spectator');
 
-  // Gestione illuminazione rossa dei turni
   if (playerRole !== 'spectator') {
     if (myTurn) {
       playerPanel.classList.add("active-turn");
@@ -479,7 +467,7 @@ function render() {
   document.getElementById("play").disabled = !myTurn || selectedCardId === null;
 
   if (gameState.status === 'waiting') {
-    document.getElementById("message").textContent = "In attesa del Giocatore 2 nel gruppo... (Condividi il link nel gruppo!)";
+    document.getElementById("message").textContent = "In attesa del Giocatore 2 nel gruppo... (Tavolo pronto!)";
   } else if (playerRole === 'spectator') {
     document.getElementById("message").textContent = "👁️ Stai assistendo alla partita in diretta.";
   } else if (myTurn) {
