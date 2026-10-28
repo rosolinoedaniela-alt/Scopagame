@@ -82,7 +82,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 
 #partyOverlay, #winOverlay, #lobbyOverlay {
  position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92);
- display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:9999; color:var(--gold); padding:20px;
+ display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; color:var(--gold); padding:20px;
 }
 #partyOverlay h2, #winOverlay h2, #lobbyOverlay h2 { font-size: 20px; margin: 0; text-shadow: 0 0 10px #ffdf76; }
 .win-box { background: rgba(6, 62, 43, 0.98); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
@@ -92,7 +92,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 </head>
 <body>
 
-<div id="partyOverlay" style="display:none;">
+<div id="partyOverlay">
  <h2>🎉 SCOPA! 🎉</h2>
  <p style="font-size:12px; color:#fff;">Grande mossa!</p>
 </div>
@@ -109,7 +109,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  </div>
 </div>
 
-<div id="winOverlay" style="display:none;">
+<div id="winOverlay">
  <div class="win-box">
   <h2>🏆 VINCITORE FINALE 🏆</h2>
   <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
@@ -140,7 +140,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button onclick="resetRoomForce()" style="background:linear-gradient(135deg,#c53030,#9b2c2c); color:#fff; border-color:#feb2b2;">Nuova Partita</button>
+   <button onclick="resetRoomForce()" style="background:linear-gradient(135deg,#c53030,#9b2c2c); color:#fff; border-color:#feb2b2;">Reset Stanza</button>
   </div>
  </section>
 
@@ -204,7 +204,7 @@ async function initRoom() {
     .eq('room_id', ROOM_ID)
     .single();
 
-  if (error || !data || !data.board_cards || !data.player1_hand || !data.player2_hand) {
+  if (error || !data || !data.board_cards || !data.player1_hand) {
     await resetRoomForce();
   } else {
     gameState = data;
@@ -283,7 +283,7 @@ async function joinAs(role) {
 
 function subscribeRealtime() {
   supabaseClient
-    .channel('public:scopa_rooms_v4')
+    .channel('public:scopa_rooms_v5')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
       if(payload.new) {
         gameState = payload.new;
@@ -459,3 +459,125 @@ function render() {
     document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
   }
 
+  document.getElementById("play").disabled = (myRole === 'none') || !isMyTurn || selectedCardId === null;
+
+  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
+    const winnerName = gameState.player1_score >= 11 ? p1Name : p2Name;
+    document.getElementById("winnerText").textContent = winnerName + " ha vinto la partita!";
+    document.getElementById("finalScore").textContent = `${p1Name}: ${gameState.player1_score} pt | ${p2Name}: ${gameState.player2_score} pt`;
+    document.getElementById("winOverlay").style.display = "flex";
+    
+    setTimeout(async () => {
+      await resetRoomForce();
+      document.getElementById("winOverlay").style.display = "none";
+    }, 5000);
+  }
+
+  if (gameState.chat) {
+    const log = document.getElementById("chatlog");
+    log.replaceChildren();
+    gameState.chat.forEach(msg => {
+      const line = document.createElement("div");
+      line.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
+      log.appendChild(line);
+    });
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+async function playPlayerCard() {
+  let myRole = (userName === gameState.player2_id) ? 'player2' : 'player1';
+  if (myRole === 'none' || selectedCardId === null) return;
+  if (gameState.turn !== myRole) return;
+
+  let hand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
+  const card = hand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  if (myRole === 'player2') {
+    gameState.player2_hand = hand.filter(c => c.id !== card.id);
+  } else {
+    gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  }
+
+  let matchIndices = findCapture(card, gameState.board_cards);
+  if (matchIndices && matchIndices.length > 0) {
+    let captured = [card];
+    matchIndices.sort((a, b) => b - a);
+    matchIndices.forEach(idx => {
+      captured.push(gameState.board_cards.splice(idx, 1)[0]);
+    });
+
+    if (myRole === 'player1') {
+      gameState.player1_captured = (gameState.player1_captured || []).concat(captured);
+      if (gameState.board_cards.length === 0) {
+        gameState.player1_scope = (gameState.player1_scope || 0) + 1;
+        triggerPartyAnimation();
+      }
+    } else {
+      gameState.player2_captured = (gameState.player2_captured || []).concat(captured);
+      if (gameState.board_cards.length === 0) {
+        gameState.player2_scope = (gameState.player2_scope || 0) + 1;
+        triggerPartyAnimation();
+      }
+    }
+  } else {
+    gameState.board_cards.push(card);
+  }
+
+  let p1H = gameState.player1_hand || [];
+  let p2H = gameState.player2_hand || [];
+  if (p1H.length === 0 && p2H.length === 0) {
+    if (gameState.deck && gameState.deck.length > 0) {
+      gameState.player1_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
+      gameState.player2_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
+    } else {
+      calculateHandPoints();
+      const deck = makeDeck();
+      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.player1_captured = [];
+      gameState.player2_captured = [];
+      gameState.player1_scope = 0;
+      gameState.player2_scope = 0;
+      gameState.deck = deck;
+    }
+  }
+
+  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
+  selectedCardId = null;
+
+  await updateRemoteState();
+  render();
+}
+
+function triggerPartyAnimation() {
+  const overlay = document.getElementById("partyOverlay");
+  overlay.style.display = "flex";
+  setTimeout(() => { overlay.style.display = "none"; }, 2000);
+}
+
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+
+  if(!gameState.chat) gameState.chat = [];
+  gameState.chat.push({ user: userName, text: val });
+  if(gameState.chat.length > 30) gameState.chat.shift();
+
+  input.value = "";
+  await updateRemoteState();
+}
+
+document.getElementById('chatInput').addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') {
+    sendChat();
+  }
+});
+
+window.addEventListener('DOMContentLoaded', () => { initRoom(); });
+</script>
+</body>
+</html>
