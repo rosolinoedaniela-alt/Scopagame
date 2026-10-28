@@ -140,6 +140,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
+   <button onclick="initRoom()" style="background:linear-gradient(135deg,#73a985,#22543d); color:#fff; border-color:#93c5ae;">Aggiorna Stato</button>
   </div>
  </section>
 
@@ -191,7 +192,10 @@ function makeDeck(){
 
 function imageURL(c){
  if (!c || !c.file) return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent("01 Asso di denari.jpg");
- let fname = c.file.replace("Dieci di Bastoni.jpg", "40 Dieci di Bastoni.jpg").replace("dieci di bastoni.jpg", "40 Dieci di Bastoni.jpg");
+ let fname = c.file;
+ if(fname.toLowerCase().includes("dieci di bastoni")) {
+   fname = "40 Dieci di Bastoni.jpg";
+ }
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
@@ -219,8 +223,7 @@ async function initRoom() {
       player2_scope: 0,
       turn: 'player1',
       deck: deck,
-      chat: [],
-      spectators: []
+      chat: []
     };
     await supabaseClient.from('scopa_rooms').upsert(newGame);
     gameState = newGame;
@@ -262,7 +265,7 @@ async function joinAs(role) {
 
 function subscribeRealtime() {
   supabaseClient
-    .channel('public:scopa_rooms')
+    .channel('public:scopa_rooms_v2')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
       gameState = payload.new;
       checkLobby();
@@ -488,4 +491,89 @@ async function playPlayerCard() {
   if (!card) return;
 
   if (myRole === 'player2') {
-    gameState.player2_hand = hand.filter(
+    gameState.player2_hand = hand.filter(c => c.id !== card.id);
+  } else {
+    gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  }
+
+  let matchIndices = findCapture(card, gameState.board_cards);
+  if (matchIndices && matchIndices.length > 0) {
+    let captured = [card];
+    matchIndices.sort((a, b) => b - a);
+    matchIndices.forEach(idx => {
+      captured.push(gameState.board_cards.splice(idx, 1)[0]);
+    });
+
+    if (myRole === 'player1') {
+      gameState.player1_captured = (gameState.player1_captured || []).concat(captured);
+      if (gameState.board_cards.length === 0) {
+        gameState.player1_scope = (gameState.player1_scope || 0) + 1;
+        triggerPartyAnimation();
+      }
+    } else {
+      gameState.player2_captured = (gameState.player2_captured || []).concat(captured);
+      if (gameState.board_cards.length === 0) {
+        gameState.player2_scope = (gameState.player2_scope || 0) + 1;
+        triggerPartyAnimation();
+      }
+    }
+  } else {
+    gameState.board_cards.push(card);
+  }
+
+  let p1H = gameState.player1_hand || [];
+  let p2H = gameState.player2_hand || [];
+  if (p1H.length === 0 && p2H.length === 0) {
+    if (gameState.deck && gameState.deck.length > 0) {
+      gameState.player1_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
+      gameState.player2_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
+    } else {
+      calculateHandPoints();
+      const deck = makeDeck();
+      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.player1_captured = [];
+      gameState.player2_captured = [];
+      gameState.player1_scope = 0;
+      gameState.player2_scope = 0;
+      gameState.deck = deck;
+    }
+  }
+
+  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
+  selectedCardId = null;
+
+  await updateRemoteState();
+  render();
+}
+
+function triggerPartyAnimation() {
+  const overlay = document.getElementById("partyOverlay");
+  overlay.style.display = "flex";
+  setTimeout(() => { overlay.style.display = "none"; }, 2000);
+}
+
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+
+  if(!gameState.chat) gameState.chat = [];
+  gameState.chat.push({ user: userName, text: val });
+  if(gameState.chat.length > 30) gameState.chat.shift();
+
+  input.value = "";
+  await updateRemoteState();
+}
+
+document.getElementById('chatInput').addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') {
+    sendChat();
+  }
+});
+
+window.addEventListener('DOMContentLoaded', () => { initRoom(); });
+</script>
+</body>
+</html>
