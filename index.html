@@ -91,7 +91,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 .win-box { background: rgba(6, 62, 43, 0.95); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
 @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -113,8 +112,8 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="score">Punti - Caricamento...</div>
- <div id="connectionStatus">Connessione online attiva</div>
+ <div id="score">Punti - Pronto</div>
+ <div id="connectionStatus">Partita attiva</div>
 </header>
 
 <main>
@@ -152,30 +151,20 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <footer>Scopa Napoletana · Monopolygoita</footer>
 
 <script>
-const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
-let supabase = null;
-try { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
-
 const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
-const userId = user ? String(user.id) : 'guest_' + Math.floor(Math.random()*1000);
-const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Ospite';
+const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Giocatore';
 
 const urlParams = new URLSearchParams(window.location.search);
-let roomId = urlParams.get('room') || 'stanza_principale';
-let forceSpectator = urlParams.get('role') === 'spectator';
+let isSpectator = urlParams.get('role') === 'spectator';
 
-let myRole = 'spectator';
-let gameFinished = false;
-let gameState = {
+let savedState = localStorage.getItem('scopa_instant_v1');
+let gameState = savedState ? JSON.parse(savedState) : {
   board_cards: [],
-  player1_id: null,
-  player1_name: 'Giocatore 1',
-  player2_id: null,
-  player2_name: 'In attesa...',
+  player1_name: userName,
+  player2_name: 'Avversario',
   player1_hand: [],
   player2_hand: [],
   player1_score: 0,
@@ -183,6 +172,7 @@ let gameState = {
   turn: 'player1',
   deck: []
 };
+
 let selectedCardId = null;
 
 const files = [
@@ -207,83 +197,27 @@ function imageURL(c){
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
-async function initOrJoinRoom() {
-  if(!supabase) {
-    document.getElementById("connectionStatus").textContent = "Errore Database";
-    return;
-  }
-
-  let { data } = await supabase.from('scopa_rooms').select('*').eq('room_id', roomId).maybeSingle();
-  
-  if(!data) {
+function initGame() {
+  if (!gameState.board_cards || gameState.board_cards.length === 0 || (!gameState.player1_hand.length && !gameState.player2_hand.length)) {
     const deck = makeDeck();
-    const initialBoard = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-    const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
-    const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
-    
-    const newRoom = {
-      room_id: roomId,
-      board_cards: initialBoard,
-      player1_id: userId,
-      player1_name: userName,
-      player1_hand: p1Hand,
-      player2_id: null,
-      player2_name: 'In attesa...',
-      player2_hand: p2Hand,
-      player1_score: 0,
-      player2_score: 0,
-      turn: 'player1',
-      deck: deck
-    };
-    await supabase.from('scopa_rooms').upsert([newRoom]);
-    gameState = newRoom;
-    myRole = forceSpectator ? 'spectator' : 'player1';
-  } else {
-    gameState = data;
-    if(forceSpectator) {
-      myRole = 'spectator';
-    } else if(gameState.player1_id === userId) {
-      myRole = 'player1';
-      if(gameState.player1_name !== userName) {
-        gameState.player1_name = userName;
-        await supabase.from('scopa_rooms').update({ player1_name: userName }).eq('room_id', roomId);
-      }
-    } else if(gameState.player2_id === userId) {
-      myRole = 'player2';
-      if(gameState.player2_name !== userName) {
-        gameState.player2_name = userName;
-        await supabase.from('scopa_rooms').update({ player2_name: userName }).eq('room_id', roomId);
-      }
-    } else if(!gameState.player2_id) {
-      gameState.player2_id = userId;
-      gameState.player2_name = userName;
-      await supabase.from('scopa_rooms').update({
-        player2_id: userId,
-        player2_name: userName
-      }).eq('room_id', roomId);
-      myRole = 'player2';
-    } else {
-      myRole = 'spectator';
-    }
+    gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+    gameState.player1_score = 0;
+    gameState.player2_score = 0;
+    gameState.player1_name = userName;
+    gameState.turn = 'player1';
+    gameState.deck = deck;
+    saveProgress();
+  } else if (!isSpectator && gameState.player1_name !== userName && gameState.player2_name === 'Avversario') {
+    gameState.player2_name = userName;
+    saveProgress();
   }
-
-  let roleText = myRole === 'spectator' ? 'Spettatore 👁️' : (myRole === 'player1' ? gameState.player1_name : gameState.player2_name);
-  document.getElementById("connectionStatus").textContent = "Connesso · Ruolo: " + roleText;
   render();
-  subscribeRealtime();
 }
 
-function subscribeRealtime() {
-  if(!supabase) return;
-  supabase.channel('room-sync-' + roomId)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${roomId}` }, payload => {
-      if(payload.new) {
-        gameState = payload.new;
-        render();
-        checkWinCondition();
-      }
-    })
-    .subscribe();
+function saveProgress() {
+  localStorage.setItem('scopa_instant_v1', JSON.stringify(gameState));
 }
 
 function render() {
@@ -297,24 +231,20 @@ function render() {
   tContainer.replaceChildren();
   oArea.replaceChildren();
 
-  const p1Name = gameState.player1_name || 'Giocatore 1';
-  const p2Name = gameState.player2_name || 'Giocatore 2';
-
-  const isMyTurn = (myRole === 'player1' && gameState.turn === 'player1') || (myRole === 'player2' && gameState.turn === 'player2');
-  
-  if (isMyTurn && myRole !== 'spectator') {
+  const isMyTurn = (gameState.turn === 'player1');
+  if (isMyTurn && !isSpectator) {
     pPanel.classList.add('active-turn');
     oPanel.classList.remove('active-turn');
     document.getElementById("myRoleLabel").textContent = "✦ LE TUE CARTE (" + userName + " - È IL TUO TURNO!) ✦";
-    document.getElementById("opponentLabel").textContent = "AVVERSARIO: " + (myRole === 'player1' ? p2Name : p1Name);
+    document.getElementById("opponentLabel").textContent = "AVVERSARIO";
   } else {
     pPanel.classList.remove('active-turn');
     oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + userName + (myRole === 'spectator' ? " - SPETTATORE 👁️" : " - ATTENDI") + ")";
-    document.getElementById("opponentLabel").textContent = "✦ TURNO DI: " + (gameState.turn === 'player1' ? p1Name : p2Name) + " ✦";
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + userName + (isSpectator ? " - SPETTATORE 👁️" : " - ATTENDI") + ")";
+    document.getElementById("opponentLabel").textContent = "✦ TURNO DELL'AVVERSARIO ✦";
   }
 
-  // Tavolo a due file
+  // Tavolo a due file (perfetto, grande e ordinato)
   if (gameState.board_cards && gameState.board_cards.length > 0) {
     const row1Cards = gameState.board_cards.slice(0, 5);
     const row2Cards = gameState.board_cards.slice(5);
@@ -342,19 +272,18 @@ function render() {
     }
   }
 
-  // Mano del giocatore o Spettatore
-  let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  if (myHand && myHand.length > 0 && myRole !== 'spectator') {
-    myHand.forEach(c => {
+  // Mano giocatore
+  if (!isSpectator && gameState.player1_hand) {
+    gameState.player1_hand.forEach(c => {
       const im = document.createElement("img");
       im.className = "card" + (selectedCardId === c.id ? " selected" : "");
       im.src = imageURL(c);
-      if(isMyTurn) {
+      if (isMyTurn) {
         im.onclick = () => { selectedCardId = c.id; render(); };
       }
       pArea.appendChild(im);
     });
-  } else if (myRole === 'spectator') {
+  } else if (isSpectator) {
     const info = document.createElement("div");
     info.style.fontSize = "8px";
     info.style.color = "#ffe7a7";
@@ -363,61 +292,40 @@ function render() {
   }
 
   // Avversario (dorsi)
-  let oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
-  if (oppHand && oppHand.length > 0 && myRole !== 'spectator') {
-    oppHand.forEach(() => {
+  if (gameState.player2_hand) {
+    gameState.player2_hand.forEach(() => {
       const b = document.createElement("div");
       b.className = "card back";
       oArea.appendChild(b);
     });
-  } else if (myRole === 'spectator') {
-    const info2 = document.createElement("div");
-    info2.style.fontSize = "8px";
-    info2.style.color = "#ffe7a7";
-    info2.textContent = `${p1Name} vs ${p2Name}`;
-    oArea.appendChild(info2);
   }
 
   if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + (Array.isArray(gameState.deck) ? gameState.deck.length : '--');
+    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
   }
 
-  document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score || 0}/11 | ${p2Name}: ${gameState.player2_score || 0}/11`;
-  document.getElementById("play").disabled = myRole === 'spectator' || !isMyTurn || selectedCardId === null;
+  document.getElementById("score").textContent = `Punti - ${gameState.player1_name}: ${gameState.player1_score}/11 | ${gameState.player2_name}: ${gameState.player2_score}/11`;
+  document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 }
 
-async function playPlayerCard() {
-  if (myRole === 'spectator' || selectedCardId === null) return;
+function playPlayerCard() {
+  if (isSpectator || selectedCardId === null || gameState.turn !== 'player1') return;
   
-  let handKey = myRole === 'player2' ? 'player2_hand' : 'player1_hand';
-  let hand = [...(gameState[handKey] || [])];
+  const hand = [...(gameState.player1_hand || [])];
   const card = hand.find(c => c.id === selectedCardId);
   if (!card) return;
 
-  gameState[handKey] = hand.filter(c => c.id !== card.id);
+  gameState.player1_hand = hand.filter(c => c.id !== card.id);
   gameState.board_cards.push(card);
 
-  let isScopa = gameState.board_cards.length === 1;
-  if(isScopa) {
+  if(gameState.board_cards.length === 1) {
     triggerPartyAnimation();
-    if(myRole === 'player1') gameState.player1_score += 1;
-    else gameState.player2_score += 1;
+    gameState.player1_score += 1;
   }
 
-  gameState.turn = (gameState.turn === 'player1') ? 'player2' : 'player1';
   selectedCardId = null;
-
-  if(supabase) {
-    await supabase.from('scopa_rooms').update({
-      board_cards: gameState.board_cards,
-      player1_hand: gameState.player1_hand,
-      player2_hand: gameState.player2_hand,
-      player1_score: gameState.player1_score,
-      player2_score: gameState.player2_score,
-      turn: gameState.turn
-    }).eq('room_id', roomId);
-  }
-
+  gameState.turn = 'player2';
+  saveProgress();
   render();
   checkWinCondition();
 }
@@ -429,17 +337,10 @@ function triggerPartyAnimation() {
 }
 
 function checkWinCondition() {
-  if (gameFinished) return;
-  
-  const p1Score = gameState.player1_score || 0;
-  const p2Score = gameState.player2_score || 0;
-
-  if (p1Score >= 11 || p2Score >= 11) {
-    gameFinished = true;
-    let winner = p1Score >= 11 ? gameState.player1_name : gameState.player2_name;
-    
+  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
+    let winner = gameState.player1_score >= 11 ? gameState.player1_name : gameState.player2_name;
     document.getElementById("winnerText").textContent = winner + " ha vinto la partita!";
-    document.getElementById("finalScore").textContent = `${gameState.player1_name}: ${p1Score} Punti | ${gameState.player2_name}: ${p2Score} Punti`;
+    document.getElementById("finalScore").textContent = `${gameState.player1_name}: ${gameState.player1_score} Punti | ${gameState.player2_name}: ${gameState.player2_score} Punti`;
     
     const winOverlay = document.getElementById("winOverlay");
     winOverlay.style.display = "flex";
@@ -452,6 +353,7 @@ function checkWinCondition() {
       if(countdownEl) countdownEl.textContent = timeLeft;
       if (timeLeft <= 0) {
         clearInterval(timer);
+        localStorage.removeItem('scopa_instant_v1');
         try { tg.close(); } catch(e) {}
       }
     }, 1000);
@@ -464,13 +366,13 @@ function sendChat() {
   if(!val) return;
   const log = document.getElementById("chatlog");
   const line = document.createElement("div");
-  line.innerHTML = `<b>${userName} ${myRole === 'spectator' ? '(Spettatore)' : ''}:</b> ${val}`;
+  line.innerHTML = `<b>${userName}:</b> ${val}`;
   log.appendChild(line);
   log.scrollTop = log.scrollHeight;
   input.value = "";
 }
 
-window.addEventListener('DOMContentLoaded', () => { initOrJoinRoom(); });
+window.addEventListener('DOMContentLoaded', () => { initGame(); });
 </script>
 </body>
 </html>
