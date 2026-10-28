@@ -385,4 +385,200 @@ function render() {
 
     const r1 = document.createElement("div");
     r1.className = "table-row";
-    row1.forEach(c
+    row1.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card";
+      im.src = imageURL(c);
+      r1.appendChild(im);
+    });
+    tContainer.appendChild(r1);
+
+    if (row2.length > 0) {
+      const r2 = document.createElement("div");
+      r2.className = "table-row";
+      row2.forEach(c => {
+        const im = document.createElement("img");
+        im.className = "card";
+        im.src = imageURL(c);
+        r2.appendChild(im);
+      });
+      tContainer.appendChild(r2);
+    }
+  }
+
+  const myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
+  if (myHand && !isSpectator) {
+    myHand.forEach(c => {
+      const im = document.createElement("img");
+      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
+      im.src = imageURL(c);
+      if(isMyTurn) {
+        im.onclick = () => { selectedCardId = c.id; render(); };
+      }
+      pArea.appendChild(im);
+    });
+  } else if (isSpectator) {
+    const info = document.createElement("div");
+    info.style.fontSize = "8px";
+    info.style.color = "#ffe7a7";
+    info.textContent = "Modalità Spettatore: Stai guardando la partita in tempo reale.";
+    pArea.appendChild(info);
+  }
+
+  const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
+  if (oppHand) {
+    oppHand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
+  }
+
+  if (gameState.deck) {
+    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+  }
+
+  document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
+
+  // Controllo fine partita a 11 punti
+  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
+    const winnerName = gameState.player1_score >= 11 ? p1Name : p2Name;
+    document.getElementById("winnerText").textContent = winnerName + " ha vinto la partita!";
+    document.getElementById("finalScore").textContent = `${p1Name}: ${gameState.player1_score} pt | ${p2Name}: ${gameState.player2_score} pt`;
+    document.getElementById("winOverlay").style.display = "flex";
+    
+    setTimeout(async () => {
+      if(!isSpectator && userName === gameState.player1_id) {
+        const deck = makeDeck();
+        gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+        gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+        gameState.player1_score = 0;
+        gameState.player2_score = 0;
+        gameState.player1_captured = [];
+        gameState.player2_captured = [];
+        gameState.player1_scope = 0;
+        gameState.player2_scope = 0;
+        gameState.turn = 'player1';
+        gameState.deck = deck;
+        await updateRemoteState();
+      }
+      document.getElementById("winOverlay").style.display = "none";
+    }, 5000);
+  }
+
+  if (gameState.chat) {
+    const log = document.getElementById("chatlog");
+    log.replaceChildren();
+    gameState.chat.forEach(msg => {
+      const line = document.createElement("div");
+      line.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
+      log.appendChild(line);
+    });
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+async function playPlayerCard() {
+  if (isSpectator || selectedCardId === null) return;
+  let myRole = (userName === gameState.player2_id) ? 'player2' : 'player1';
+  if (gameState.turn !== myRole) return;
+
+  let hand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
+  const card = hand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  // Rimuovi carta dalla mano
+  if (myRole === 'player2') {
+    gameState.player2_hand = hand.filter(c => c.id !== card.id);
+  } else {
+    gameState.player1_hand = hand.filter(c => c.id !== card.id);
+  }
+
+  // Logica di presa
+  let matchIndices = findCapture(card, gameState.board_cards);
+  if (matchIndices && matchIndices.length > 0) {
+    let captured = [card];
+    // Ordina gli indici in ordine discendente per rimuoverli dal tavolo senza sballare gli indici
+    matchIndices.sort((a, b) => b - a);
+    matchIndices.forEach(idx => {
+      captured.push(gameState.board_cards.splice(idx, 1)[0]);
+    });
+
+    if (myRole === 'player1') {
+      gameState.player1_captured = (gameState.player1_captured || []).concat(captured);
+      if (gameState.board_cards.length === 0) {
+        gameState.player1_scope = (gameState.player1_scope || 0) + 1;
+        triggerPartyAnimation();
+      }
+    } else {
+      gameState.player2_captured = (gameState.player2_captured || []).concat(captured);
+      if (gameState.board_cards.length === 0) {
+        gameState.player2_scope = (gameState.player2_scope || 0) + 1;
+        triggerPartyAnimation();
+      }
+    }
+  } else {
+    // Nessuna presa, la carta si appoggia sul tavolo
+    gameState.board_cards.push(card);
+  }
+
+  // Se le mani sono vuote, distribuisci nuove carte o termina la mano
+  let p1H = gameState.player1_hand || [];
+  let p2H = gameState.player2_hand || [];
+  if (p1H.length === 0 && p2H.length === 0) {
+    if (gameState.deck && gameState.deck.length > 0) {
+      gameState.player1_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
+      gameState.player2_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
+    } else {
+      // Fine del mazzo e delle mani: calcola punti della mano
+      calculateHandPoints();
+      // Nuova mano
+      const deck = makeDeck();
+      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.player1_captured = [];
+      gameState.player2_captured = [];
+      gameState.player1_scope = 0;
+      gameState.player2_scope = 0;
+      gameState.deck = deck;
+    }
+  }
+
+  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
+  selectedCardId = null;
+
+  await updateRemoteState();
+  render();
+}
+
+function triggerPartyAnimation() {
+  const overlay = document.getElementById("partyOverlay");
+  overlay.style.display = "flex";
+  setTimeout(() => { overlay.style.display = "none"; }, 2000);
+}
+
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+
+  if(!gameState.chat) gameState.chat = [];
+  gameState.chat.push({ user: userName, text: val });
+  if(gameState.chat.length > 30) gameState.chat.shift();
+
+  input.value = "";
+  await updateRemoteState();
+}
+
+document.getElementById('chatInput').addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') {
+    sendChat();
+  }
+});
+
+window.addEventListener('DOMContentLoaded', () => { initRoom(); });
+</script>
+</body>
+</html>
