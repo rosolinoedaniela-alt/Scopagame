@@ -184,13 +184,13 @@ const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const tg = window.Telegram.WebApp;
-tg.expand();
+const tg = window.Telegram?.WebApp || {};
+try { if (tg.expand) tg.expand(); } catch(e){}
 
 const user = tg.initDataUnsafe?.user;
-const userId = user ? user.id : Math.floor(Math.random() * 1000000);
+const userId = user ? user.id : 111111;
 const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
-const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
+const chatId = tg.initDataUnsafe?.chat?.id || 999999;
 
 let currentGameId = null;
 let playerRole = 'spectator';
@@ -265,7 +265,7 @@ async function initMultiplayer() {
       document.getElementById("connectionStatus").textContent = "Sei il Giocatore 2";
     } else if (!game.player2_id || game.status === 'waiting') {
       playerRole = 'player2';
-      const deck = makeDeck();
+      const deck = game.deck && game.deck.length > 0 ? game.deck : makeDeck();
       const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
       const p1Hand = game.player1_hand && game.player1_hand.length > 0 ? game.player1_hand : [deck.pop(), deck.pop(), deck.pop()];
       const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
