@@ -70,7 +70,7 @@ footer {font-size:6px;color:#d4c39c;padding:0;flex-shrink:0}
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Giocatore 1: 0 / 11 — Giocatore 2: 0 / 11</div>
- <div id="connectionStatus">Connessione al tavolo...</div>
+ <div id="connectionStatus">Tavolo pronto</div>
 </header>
 
 <main>
@@ -121,7 +121,6 @@ const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id || 12345;
 
 let currentGameId = null;
-let playerRole = 'player1';
 let gameState = {
   board_cards: [],
   player1_hand: [],
@@ -165,8 +164,6 @@ function imageURL(c){
 }
 
 async function initGame() {
-  document.getElementById("connectionStatus").textContent = "Tavolo online attivo";
-
   try {
     let { data: games } = await supabase.from('games').select('*').eq('chat_id', chatId).neq('status', 'finished').limit(1);
 
@@ -193,7 +190,6 @@ async function initGame() {
       }
     }
   } catch (e) {
-    // Fallback locale di sicurezza se la rete tentenna
     const deck = makeDeck();
     gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
     gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
@@ -223,7 +219,6 @@ function render() {
   mArea.replaceChildren();
   oArea.replaceChildren();
 
-  // Carte sul tavolo
   if (gameState.board_cards) {
     gameState.board_cards.forEach(c => {
       const im = document.createElement("img");
@@ -233,7 +228,6 @@ function render() {
     });
   }
 
-  // Nostra mano
   if (gameState.player1_hand) {
     gameState.player1_hand.forEach(c => {
       const im = document.createElement("img");
@@ -244,7 +238,6 @@ function render() {
     });
   }
 
-  // Avversario (dorso)
   if (gameState.player2_hand) {
     gameState.player2_hand.forEach(() => {
       const b = document.createElement("div");
