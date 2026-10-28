@@ -158,9 +158,6 @@ try { if (tg.expand) tg.expand(); } catch(e){}
 const user = tg.initDataUnsafe?.user;
 const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Ospite';
 
-// Inserisci qui il tuo username esatto di Telegram (es. '@Daniela83Divaa') per avere i privilegi di proprietaria
-const OWNER_USERNAME = '@Daniela83Divaa'; 
-
 const urlParams = new URLSearchParams(window.location.search);
 let isSpectator = urlParams.get('role') === 'spectator';
 const ROOM_ID = 'stanza_principale';
@@ -203,7 +200,6 @@ async function initRoom() {
     .single();
 
   if (error || !data) {
-    // Se la stanza non esiste, solo tu (proprietaria) o se nessuno è registrato puoi crearla
     const deck = makeDeck();
     const newGame = {
       room_id: ROOM_ID,
@@ -214,6 +210,10 @@ async function initRoom() {
       player2_hand: [deck.pop(), deck.pop(), deck.pop()],
       player1_score: 0,
       player2_score: 0,
+      player1_captured: [],
+      player2_captured: [],
+      player1_scope: 0,
+      player2_scope: 0,
       turn: 'player1',
       deck: deck,
       chat: [],
@@ -224,8 +224,11 @@ async function initRoom() {
   } else {
     gameState = data;
     if (!gameState.spectators) gameState.spectators = [];
+    if (!gameState.player1_captured) gameState.player1_captured = [];
+    if (!gameState.player2_captured) gameState.player2_captured = [];
+    if (!gameState.player1_scope) gameState.player1_scope = 0;
+    if (!gameState.player2_scope) gameState.player2_scope = 0;
 
-    // Se ricarichi la pagina o entri, NON azzera mai la partita in corso
     if (isSpectator) {
       if (!gameState.spectators.includes(userName)) {
         if (gameState.spectators.length >= 3) {
@@ -236,7 +239,6 @@ async function initRoom() {
         await updateRemoteState();
       }
     } else {
-      // Assegna i posti solo se liberi o se l'utente è già registrato nella stanza
       if (!gameState.player1_id) {
         gameState.player1_id = userName;
         await updateRemoteState();
@@ -263,6 +265,75 @@ function subscribeRealtime() {
 
 async function updateRemoteState() {
   await supabaseClient.from('scopa_rooms').upsert(gameState);
+}
+
+function findCapture(card, board) {
+  // 1. Cerca presa per valore esatto singolo
+  for (let i = 0; i < board.length; i++) {
+    if (board[i].rank === card.rank) {
+      return [i];
+    }
+  }
+  // 2. Cerca combinazioni per somma
+  function searchSum(target, currentSum, startIndex, currentIndices) {
+    if (currentSum === target) return currentIndices;
+    if (currentSum > target || startIndex >= board.length) return null;
+    
+    for (let i = startIndex; i < board.length; i++) {
+      const res = searchSum(target, currentSum + board[i].rank, i + 1, [...currentIndices, i]);
+      if (res) return res;
+    }
+    return null;
+  }
+  return searchSum(card.rank, 0, 0, []);
+}
+
+function calculateHandPoints() {
+  let p1Cards = gameState.player1_captured || [];
+  let p2Cards = gameState.player2_captured || [];
+
+  let p1Pts = gameState.player1_scope || 0;
+  let p2Pts = gameState.player2_scope || 0;
+
+  // Punto Carte (> 20)
+  if (p1Cards.length > p2Cards.length) p1Pts += 1;
+  else if (p2Cards.length > p1Cards.length) p2Pts += 1;
+
+  // Punto Denari (> 5)
+  let p1Denari = p1Cards.filter(c => c.file.includes('denari')).length;
+  let p2Denari = p2Cards.filter(c => c.file.includes('denari')).length;
+  if (p1Denari > p2Denari) p1Pts += 1;
+  else if (p2Denari > p1Denari) p2Pts += 1;
+
+  // Sette Bello (7 di denari)
+  let p1Has7Bello = p1Cards.some(c => c.file === '07 Sette di denari.jpg');
+  let p2Has7Bello = p2Cards.some(c => c.file === '07 Sette di denari.jpg');
+  if (p1Has7Bello) p1Pts += 1;
+  if (p2Has7Bello) p2Pts += 1;
+
+  // Primiera
+  const primieraValues = {7:21, 6:18, 1:16, 5:15, 4:14, 3:13, 2:12, 10:10, 9:10, 8:10};
+  function getBestPerSuit(cards) {
+    let suits = { denari: 0, coppe: 0, spade: 0, bastoni: 0 };
+    let found = { denari: false, coppe: false, spade: false, bastoni: false };
+    cards.forEach(c => {
+      let suit = c.file.includes('denari') ? 'denari' : c.file.includes('coppe') ? 'coppe' : c.file.includes('spade') ? 'spade' : 'bastoni';
+      let val = primieraValues[c.rank] || 0;
+      if (val > suits[suit]) {
+        suits[suit] = val;
+        found[suit] = true;
+      }
+    });
+    if (!found.denari || !found.coppe || !found.spade || !found.bastoni) return 0;
+    return suits.denari + suits.coppe + suits.spade + suits.bastoni;
+  }
+  let p1Primiera = getBestPerSuit(p1Cards);
+  let p2Primiera = getBestPerSuit(p2Cards);
+  if (p1Primiera > p2Primiera) p1Pts += 1;
+  else if (p2Primiera > p1Primiera) p2Pts += 1;
+
+  gameState.player1_score += p1Pts;
+  gameState.player2_score += p2Pts;
 }
 
 function render() {
@@ -314,152 +385,4 @@ function render() {
 
     const r1 = document.createElement("div");
     r1.className = "table-row";
-    row1.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card";
-      im.src = imageURL(c);
-      r1.appendChild(im);
-    });
-    tContainer.appendChild(r1);
-
-    if (row2.length > 0) {
-      const r2 = document.createElement("div");
-      r2.className = "table-row";
-      row2.forEach(c => {
-        const im = document.createElement("img");
-        im.className = "card";
-        im.src = imageURL(c);
-        r2.appendChild(im);
-      });
-      tContainer.appendChild(r2);
-    }
-  }
-
-  const myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  if (myHand && !isSpectator) {
-    myHand.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
-      im.src = imageURL(c);
-      if(isMyTurn) {
-        im.onclick = () => { selectedCardId = c.id; render(); };
-      }
-      pArea.appendChild(im);
-    });
-  } else if (isSpectator) {
-    const info = document.createElement("div");
-    info.style.fontSize = "8px";
-    info.style.color = "#ffe7a7";
-    info.textContent = "Modalità Spettatore: Stai guardando la partita in tempo reale.";
-    pArea.appendChild(info);
-  }
-
-  const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
-  if (oppHand) {
-    oppHand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
-  }
-
-  document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
-
-  // Controllo fine partita a 11 punti
-  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
-    const winnerName = gameState.player1_score >= 11 ? p1Name : p2Name;
-    document.getElementById("winnerText").textContent = winnerName + " ha vinto la partita!";
-    document.getElementById("finalScore").textContent = `${p1Name}: ${gameState.player1_score} pt | ${p2Name}: ${gameState.player2_score} pt`;
-    document.getElementById("winOverlay").style.display = "flex";
-    
-    setTimeout(async () => {
-      if(!isSpectator && userName === gameState.player1_id) {
-        const deck = makeDeck();
-        gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-        gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-        gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-        gameState.player1_score = 0;
-        gameState.player2_score = 0;
-        gameState.turn = 'player1';
-        gameState.deck = deck;
-        await updateRemoteState();
-      }
-      document.getElementById("winOverlay").style.display = "none";
-    }, 5000);
-  }
-
-  if (gameState.chat) {
-    const log = document.getElementById("chatlog");
-    log.replaceChildren();
-    gameState.chat.forEach(msg => {
-      const line = document.createElement("div");
-      line.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
-      log.appendChild(line);
-    });
-    log.scrollTop = log.scrollHeight;
-  }
-}
-
-async function playPlayerCard() {
-  if (isSpectator || selectedCardId === null) return;
-  let myRole = (userName === gameState.player2_id) ? 'player2' : 'player1';
-  if (gameState.turn !== myRole) return;
-
-  let hand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  const card = hand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  if (myRole === 'player2') {
-    gameState.player2_hand = hand.filter(c => c.id !== card.id);
-  } else {
-    gameState.player1_hand = hand.filter(c => c.id !== card.id);
-  }
-
-  gameState.board_cards.push(card);
-
-  if(gameState.board_cards.length === 1) {
-    if(myRole === 'player1') gameState.player1_score += 1;
-    else gameState.player2_score += 1;
-    triggerPartyAnimation();
-  }
-
-  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
-  selectedCardId = null;
-
-  await updateRemoteState();
-  render();
-}
-
-function triggerPartyAnimation() {
-  const overlay = document.getElementById("partyOverlay");
-  overlay.style.display = "flex";
-  setTimeout(() => { overlay.style.display = "none"; }, 2000);
-}
-
-async function sendChat() {
-  const input = document.getElementById("chatInput");
-  const val = input.value.trim();
-  if(!val) return;
-
-  if(!gameState.chat) gameState.chat = [];
-  gameState.chat.push({ user: userName, text: val });
-  if(gameState.chat.length > 30) gameState.chat.shift();
-
-  input.value = "";
-  await updateRemoteState();
-}
-
-document.getElementById('chatInput').addEventListener('keypress', function (e) {
-  if (e.key === 'Enter') {
-    sendChat();
-  }
-});
-
-window.addEventListener('DOMContentLoaded', () => { initRoom(); });
-</script>
-</body>
-</html>
+    row1.forEach(c
