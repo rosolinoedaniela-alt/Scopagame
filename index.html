@@ -142,7 +142,7 @@ footer {font-size:8px;color:#d4c39c;padding:2px;flex-shrink:0}
 <header>
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
- <div id="connectionStatus">Connessione in corso...</div>
+ <div id="connectionStatus">Connessione al tavolo...</div>
  <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
 </header>
 
@@ -190,7 +190,8 @@ tg.expand();
 const user = tg.initDataUnsafe?.user;
 const userId = user ? user.id : Math.floor(Math.random() * 1000000);
 const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
-const chatId = tg.initDataUnsafe?.chat?.id || 123456789;
+// Usa l'ID della chat o, in fallback, una stanza globale fissa per testare subito anche in privato
+const chatId = tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.start_param || 999999;
 
 let currentGameId = null;
 let playerRole = 'spectator';
@@ -245,91 +246,99 @@ function imageURL(c){
 async function initMultiplayer() {
   document.getElementById("connectionStatus").textContent = "Connessione al tavolo...";
 
-  // Cerca una partita attiva o in attesa per questa chat
-  let { data: games } = await supabase
-    .from('games')
-    .select('*')
-    .eq('chat_id', chatId)
-    .neq('status', 'finished')
-    .limit(1);
+  try {
+    let { data: games, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('chat_id', chatId)
+      .neq('status', 'finished')
+      .limit(1);
 
-  if (games && games.length > 0) {
-    const game = games[0];
-    currentGameId = game.id;
+    if (games && games.length > 0) {
+      const game = games[0];
+      currentGameId = game.id;
 
-    if (game.player1_id === userId) {
-      playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "Sei il Giocatore 1";
-    } else if (game.player2_id === userId) {
-      playerRole = 'player2';
-      document.getElementById("connectionStatus").textContent = "Sei il Giocatore 2";
-    } else if (!game.player2_id || game.status === 'waiting') {
-      playerRole = 'player2';
-      const deck = makeDeck();
-      const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
-      const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
+      if (game.player1_id === userId) {
+        playerRole = 'player1';
+        document.getElementById("connectionStatus").textContent = "Sei il Giocatore 1";
+      } else if (game.player2_id === userId) {
+        playerRole = 'player2';
+        document.getElementById("connectionStatus").textContent = "Sei il Giocatore 2";
+      } else if (!game.player2_id || game.status === 'waiting') {
+        playerRole = 'player2';
+        const deck = makeDeck();
+        const board = game.board_cards && game.board_cards.length > 0 ? game.board_cards : [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
+        const p2Hand = [deck.pop(), deck.pop(), deck.pop()];
 
-      await supabase.from('games').update({
-        player2_id: userId,
-        player2_name: userName,
-        status: 'playing',
-        board_cards: board,
-        player1_hand: p1Hand,
-        player2_hand: p2Hand,
-        player1_captured: [],
-        player2_captured: [],
-        player1_score: 0,
-        player2_score: 0,
-        player1_scope: 0,
-        player2_scope: 0,
-        deck: deck,
-        turn: game.player1_id
-      }).eq('id', currentGameId);
+        await supabase.from('games').update({
+          player2_id: userId,
+          player2_name: userName,
+          status: 'playing',
+          board_cards: board,
+          player1_hand: p1Hand,
+          player2_hand: p2Hand,
+          player1_captured: [],
+          player2_captured: [],
+          player1_score: 0,
+          player2_score: 0,
+          player1_scope: 0,
+          player2_scope: 0,
+          deck: deck,
+          turn: game.player1_id
+        }).eq('id', currentGameId);
 
-      document.getElementById("connectionStatus").textContent = "Partita iniziata con " + game.player1_name;
-    } else {
-      document.getElementById("spectateBtn").classList.remove("hidden");
-      document.getElementById("connectionStatus").textContent = "Tavolo occupato. Puoi fare lo spettatore.";
-    }
-  } else {
-    // Se non esiste alcuna partita, creala subito come Giocatore 1
-    const deck = makeDeck();
-    const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-    
-    const { data: newGame, error: insErr } = await supabase.from('games').insert([
-      {
-        chat_id: chatId,
-        player1_id: userId,
-        player1_name: userName,
-        status: 'waiting',
-        board_cards: board,
-        player1_hand: [],
-        player2_hand: [],
-        player1_captured: [],
-        player2_captured: [],
-        player1_score: 0,
-        player2_score: 0,
-        player1_scope: 0,
-        player2_scope: 0,
-        deck: []
+        document.getElementById("connectionStatus").textContent = "Partita iniziata con " + game.player1_name;
+      } else {
+        document.getElementById("spectateBtn").classList.remove("hidden");
+        document.getElementById("connectionStatus").textContent = "Tavolo occupato. Puoi fare lo spettatore.";
       }
-    ]).select().single();
+    } else {
+      const deck = makeDeck();
+      const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      
+      const { data: newGame, error: insErr } = await supabase.from('games').insert([
+        {
+          chat_id: chatId,
+          player1_id: userId,
+          player1_name: userName,
+          status: 'waiting',
+          board_cards: board,
+          player1_hand: [],
+          player2_hand: [],
+          player1_captured: [],
+          player2_captured: [],
+          player1_score: 0,
+          player2_score: 0,
+          player1_scope: 0,
+          player2_scope: 0,
+          deck: []
+        }
+      ]).select().single();
 
-    if (insErr) {
-      // Se c'è un conflitto di concorrenza, prova a rileggere subito la tabella
-      initMultiplayer();
-      return;
+      if (insErr) {
+        document.getElementById("connectionStatus").textContent = "Errore di accesso al DB";
+        return;
+      }
+
+      if (newGame) {
+        currentGameId = newGame.id;
+        playerRole = 'player1';
+        document.getElementById("connectionStatus").textContent = "Tavolo creato. In attesa del G2...";
+      }
     }
 
-    if (newGame) {
-      currentGameId = newGame.id;
-      playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "Tavolo creato. In attesa del Giocatore 2...";
+    if (currentGameId) {
+      const { data } = await supabase.from('games').select('*').eq('id', currentGameId).single();
+      if (data) {
+        gameState = data;
+        render();
+      }
+      subscribeRealtime();
     }
+  } catch (err) {
+    document.getElementById("connectionStatus").textContent = "Errore di rete";
   }
-
-  subscribeRealtime();
 }
 
 function joinAsSpectator() {
@@ -353,15 +362,7 @@ function subscribeRealtime() {
       gameState = payload.new;
       render();
     })
-    .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        const { data } = await supabase.from('games').select('*').eq('id', currentGameId).single();
-        if (data) {
-          gameState = data;
-          render();
-        }
-      }
-    });
+    .subscribe();
 }
 
 function render() {
@@ -563,4 +564,29 @@ function calculateRoundScores(payload) {
 }
 
 function getPrimieraScore(cards) {
-  let best = { denari: 0, co
+  let best = { denari: 0, coppe: 0, spade: 0, bastoni: 0 };
+  cards.forEach(c => {
+    let val = primieraValues[c.value] || 0;
+    if (val > best[c.suit]) best[c.suit] = val;
+  });
+  return best.denari + best.coppe + best.spade + best.bastoni;
+}
+
+function sendChat() {
+  const input = document.getElementById("chatInput");
+  const val = input.value.trim();
+  if(!val) return;
+  const log = document.getElementById("chatlog");
+  const line = document.createElement("div");
+  line.textContent = userName + ": " + val;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initMultiplayer();
+});
+</script>
+</body>
+</html>
