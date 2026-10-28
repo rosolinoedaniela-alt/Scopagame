@@ -35,7 +35,7 @@ header {
 }
 .brand{font-size:8px;letter-spacing:1px;color:var(--gold)}
 h1{margin:1px 0;color:var(--gold);font-size:14px;letter-spacing:1px}
-#score{font-size:11px;font-weight:bold;margin:1px 0}
+#score{font-size:11px;font-weight:bold;margin:1px 0;color:#ffe7a7}
 #connectionStatus{font-size:9px;color:#f5d58b}
 
 main {
@@ -132,7 +132,6 @@ button {
 #chatInput {flex:1;border-radius:4px;padding:3px 6px;border:1px solid #c6a85e;font-size:10px}
 
 footer {font-size:8px;color:#d4c39c;padding:2px;flex-shrink:0}
-.hidden{display:none!important}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -192,11 +191,18 @@ const userName = user ? (user.first_name || 'Giocatore') : 'Ospite_' + userId;
 const chatId = tg.initDataUnsafe?.chat?.id || 123456789;
 
 let currentGameId = null;
-let playerRole = null;
+let playerRole = 'spectator';
 let gameState = {
   board_cards: [],
   player1_hand: [],
   player2_hand: [],
+  player1_captured: [],
+  player2_captured: [],
+  player1_score: 0,
+  player2_score: 0,
+  player1_scope: 0,
+  player2_scope: 0,
+  last_capture_role: null,
   deck: [],
   turn: null,
   status: 'waiting',
@@ -207,29 +213,15 @@ let gameState = {
 };
 let selectedCardId = null;
 
-const suits=["denari","coppe","spade","bastoni"];
-const files=[
-"01 Asso di denari.jpg","02 Due di denari.jpg",
-"03 Tre di denari.jpg","04 Quattro di denari.jpg",
-"05 Cinque di denari.jpg","06 Sei di denari.jpg",
-"07 Sette di denari.jpg","08 Otto di denari.jpg",
-"09 Nove di denari.jpg","10 Dieci di denari.jpg",
-"11 Asso di coppe.jpg","12 Due di coppe.jpg",
-"13 Tre di coppe.jpg","14 Quattro di coppe.jpg",
-"15 Cinque di coppe.jpg","16 Sei di coppe.jpg",
-"17 Sette di coppe.jpg","18 Otto di coppe.jpg",
-"19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
-"21 Asso di spade.jpg","22 Due di spade.jpg",
-"23 Tre di spade.jpg","24 Quattro di spade.jpg",
-"25 Cinque di spade.jpg","26 Sei di spade.jpg",
-"27 Sette di spade.jpg","28 Otto di spade.jpg",
-"29 Nove di spade.jpg","30 Dieci di spade.jpg",
-"31 Asso di bastoni.jpg","32 Due di bastoni.jpg",
-"33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg",
-"35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg",
-"37 Sette di bastoni.jpg","38 Otto di bastoni.jpg",
-"39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+const suits = ["denari", "coppe", "spade", "bastoni"];
+const files = [
+  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
+  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
+  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
 ];
+
+const primieraValues = {7: 21, 6: 18, 1: 16, 5: 15, 4: 14, 3: 13, 2: 12, 8: 10, 9: 10, 10: 10};
 
 function makeDeck(){
  const d=files.map((file,i)=>({
@@ -254,19 +246,21 @@ async function initMultiplayer() {
     .from('games')
     .select('*')
     .eq('chat_id', chatId)
-    .eq('status', 'waiting')
+    .neq('status', 'finished')
     .limit(1);
 
   if (games && games.length > 0) {
     const game = games[0];
+    currentGameId = game.id;
+
     if (game.player1_id === userId) {
-      currentGameId = game.id;
       playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "In attesa di avversario...";
-    } else {
-      currentGameId = game.id;
+      document.getElementById("connectionStatus").textContent = "In gioco (Giocatore 1)";
+    } else if (game.player2_id === userId) {
       playerRole = 'player2';
-      
+      document.getElementById("connectionStatus").textContent = "In gioco (Giocatore 2)";
+    } else if (game.status === 'waiting') {
+      playerRole = 'player2';
       const deck = makeDeck();
       const board = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
       const p1Hand = [deck.pop(), deck.pop(), deck.pop()];
@@ -279,11 +273,20 @@ async function initMultiplayer() {
         board_cards: board,
         player1_hand: p1Hand,
         player2_hand: p2Hand,
+        player1_captured: [],
+        player2_captured: [],
+        player1_score: 0,
+        player2_score: 0,
+        player1_scope: 0,
+        player2_scope: 0,
         deck: deck,
         turn: game.player1_id
       }).eq('id', currentGameId);
 
       document.getElementById("connectionStatus").textContent = "In gioco con " + game.player1_name;
+    } else {
+      playerRole = 'spectator';
+      document.getElementById("connectionStatus").textContent = "👁️ Modalità Spettatore";
     }
   } else {
     const { data: newGame } = await supabase.from('games').insert([
@@ -295,6 +298,12 @@ async function initMultiplayer() {
         board_cards: [],
         player1_hand: [],
         player2_hand: [],
+        player1_captured: [],
+        player2_captured: [],
+        player1_score: 0,
+        player2_score: 0,
+        player1_scope: 0,
+        player2_scope: 0,
         deck: []
       }
     ]).select().single();
@@ -341,11 +350,19 @@ function render() {
   mArea.replaceChildren();
   oArea.replaceChildren();
 
-  const isP1 = playerRole === 'player1';
-  document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : gameState.player2_name) + ")";
-  document.getElementById("opponentLabel").textContent = "AVVERSARIO · " + (isP1 ? (gameState.player2_name || "In attesa...") : gameState.player1_name);
+  document.getElementById("score").textContent = 
+    `${gameState.player1_name || 'G1'}: ${gameState.player1_score || 0} — ${gameState.player2_name || 'G2'}: ${gameState.player2_score || 0}`;
 
-  const myHand = isP1 ? gameState.player1_hand : gameState.player2_hand;
+  if (playerRole === 'spectator') {
+    document.getElementById("myRoleLabel").textContent = "CARTE " + (gameState.player1_name || "G1");
+    document.getElementById("opponentLabel").textContent = "CARTE " + (gameState.player2_name || "G2");
+  } else {
+    const isP1 = playerRole === 'player1';
+    document.getElementById("myRoleLabel").textContent = "LE TUE CARTE (" + (isP1 ? gameState.player1_name : gameState.player2_name) + ")";
+    document.getElementById("opponentLabel").textContent = "AVVERSARIO · " + (isP1 ? (gameState.player2_name || "In attesa...") : gameState.player1_name);
+  }
+
+  const myHand = (playerRole === 'spectator' || playerRole === 'player1') ? gameState.player1_hand : gameState.player2_hand;
   if (myHand) {
     myHand.forEach(c => {
       const im = document.createElement("img");
@@ -353,7 +370,7 @@ function render() {
       im.src = imageURL(c);
       im.alt = c.file;
       im.onclick = () => {
-        if (gameState.turn === userId && gameState.status === 'playing') {
+        if (playerRole !== 'spectator' && gameState.turn === userId && gameState.status === 'playing') {
           selectedCardId = c.id;
           render();
         }
@@ -362,63 +379,4 @@ function render() {
     });
   }
 
-  const oppHand = isP1 ? gameState.player2_hand : gameState.player1_hand;
-  if (oppHand) {
-    oppHand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.board_cards) {
-    gameState.board_cards.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card";
-      im.src = imageURL(c);
-      mArea.appendChild(im);
-    });
-  }
-
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 MAZZO: " + gameState.deck.length;
-  }
-
-  const myTurn = (gameState.turn === userId && gameState.status === 'playing');
-  document.getElementById("play").disabled = !myTurn || selectedCardId === null;
-
-  if (gameState.status === 'waiting') {
-    say("In attesa di un altro giocatore...");
-  } else if (myTurn) {
-    say("Tocca a te! Scegli una carta e gioca.");
-  } else {
-    say("Turno dell'avversario...");
-  }
-}
-
-function say(t) {
-  document.getElementById("message").textContent = t;
-}
-
-async function playPlayerCard() {
-  const isP1 = playerRole === 'player1';
-  const myHand = isP1 ? [...gameState.player1_hand] : [...gameState.player2_hand];
-  const card = myHand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  const newMyHand = myHand.filter(c => c.id !== card.id);
-  let board = [...gameState.board_cards];
-
-  const exactIndex = board.findIndex(c => c.value === card.value);
-  if (exactIndex !== -1) {
-    board.splice(exactIndex, 1);
-  } else {
-    board.push(card);
-  }
-
-  const oppId = isP1 ? gameState.player2_id : gameState.player1_id;
-
-  const updatePayload = isP1 ? {
-    player1_hand: newMyHand,
-    board_cards: board,
-    turn
+  const oppHand = (playerRole === 'spectator'
