@@ -140,8 +140,8 @@ footer {font-size:8px;color:#d4c39c;padding:2px;flex-shrink:0}
 </head>
 <body>
 <header>
- <div class="brand">MONOPOLIGOITA PRESENTA</div>
- <h1>Scopa by Dany</h1>
+ <div class="brand">Dany presenta</div>
+ <h1>Scopa di Monopolygoita</h1>
  <div id="connectionStatus">Connessione in corso...</div>
  <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
 </header>
@@ -401,4 +401,24 @@ function say(t) {
 }
 
 async function playPlayerCard() {
-  const isP1 = player
+  const isP1 = playerRole === 'player1';
+  const myHand = isP1 ? [...gameState.player1_hand] : [...gameState.player2_hand];
+  const card = myHand.find(c => c.id === selectedCardId);
+  if (!card) return;
+
+  const newMyHand = myHand.filter(c => c.id !== card.id);
+  let board = [...gameState.board_cards];
+
+  const exactIndex = board.findIndex(c => c.value === card.value);
+  if (exactIndex !== -1) {
+    board.splice(exactIndex, 1);
+  } else {
+    board.push(card);
+  }
+
+  const oppId = isP1 ? gameState.player2_id : gameState.player1_id;
+
+  const updatePayload = isP1 ? {
+    player1_hand: newMyHand,
+    board_cards: board,
+    turn
