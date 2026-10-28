@@ -114,7 +114,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  <div class="brand">Dany presenta</div>
  <h1>Scopa di Monopolygoita</h1>
  <div id="score">Punti - In attesa...</div>
- <div id="connectionStatus">Connessione in tempo reale...</div>
+ <div id="connectionStatus">Connessione online attiva</div>
 </header>
 
 <main>
@@ -213,7 +213,7 @@ async function initOrJoinRoom() {
     return;
   }
 
-  let { data } = await supabase.from('scopa_rooms').select('*').eq('room_id', roomId).single();
+  let { data } = await supabase.from('scopa_rooms').select('*').eq('room_id', roomId).maybeSingle();
   
   if(!data) {
     const deck = makeDeck();
@@ -235,7 +235,7 @@ async function initOrJoinRoom() {
       turn: 'player1',
       deck: deck
     };
-    await supabase.from('scopa_rooms').insert([newRoom]);
+    await supabase.from('scopa_rooms').upsert([newRoom]);
     gameState = newRoom;
     myRole = forceSpectator ? 'spectator' : 'player1';
   } else {
@@ -342,7 +342,7 @@ function render() {
     }
   }
 
-  // Mano del giocatore o Spettatore (orizzontale perfetta)
+  // Mano del giocatore o Spettatore
   let myHand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
   if (myHand && myRole !== 'spectator') {
     myHand.forEach(c => {
@@ -362,7 +362,7 @@ function render() {
     pArea.appendChild(info);
   }
 
-  // Avversario (dorsi in orizzontale anziché in verticale)
+  // Avversario (dorsi)
   let oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
   if (oppHand && myRole !== 'spectator') {
     oppHand.forEach(() => {
