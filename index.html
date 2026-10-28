@@ -81,18 +81,18 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 #chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
 
 #partyOverlay, #winOverlay, #lobbyOverlay {
- position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9);
- display:none; flex-direction:column; justify-content:center; align-items:center; z-index:999; color:var(--gold); padding:20px;
+ position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92);
+ display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:9999; color:var(--gold); padding:20px;
 }
 #partyOverlay h2, #winOverlay h2, #lobbyOverlay h2 { font-size: 20px; margin: 0; text-shadow: 0 0 10px #ffdf76; }
-.win-box { background: rgba(6, 62, 43, 0.95); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
+.win-box { background: rgba(6, 62, 43, 0.98); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<div id="partyOverlay">
+<div id="partyOverlay" style="display:none;">
  <h2>🎉 SCOPA! 🎉</h2>
  <p style="font-size:12px; color:#fff;">Grande mossa!</p>
 </div>
@@ -109,7 +109,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
  </div>
 </div>
 
-<div id="winOverlay">
+<div id="winOverlay" style="display:none;">
  <div class="win-box">
   <h2>🏆 VINCITORE FINALE 🏆</h2>
   <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
@@ -140,7 +140,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button onclick="forceReset()" style="background:linear-gradient(135deg,#c53030,#9b2c2c); color:#fff; border-color:#feb2b2;">Nuova Partita</button>
+   <button onclick="resetRoomForce()" style="background:linear-gradient(135deg,#c53030,#9b2c2c); color:#fff; border-color:#feb2b2;">Nuova Partita</button>
   </div>
  </section>
 
@@ -198,37 +198,29 @@ function imageURL(c){
 }
 
 async function initRoom() {
-  try {
-    const { data, error } = await supabaseClient
-      .from('scopa_rooms')
-      .select('*')
-      .eq('room_id', ROOM_ID)
-      .maybeSingle();
+  const { data, error } = await supabaseClient
+    .from('scopa_rooms')
+    .select('*')
+    .eq('room_id', ROOM_ID)
+    .single();
 
-    if (error || !data) {
-      await forceReset();
-    } else {
-      gameState = data;
-      if (!gameState.player1_captured) gameState.player1_captured = [];
-      if (!gameState.player2_captured) gameState.player2_captured = [];
-      if (!gameState.player1_scope) gameState.player1_scope = 0;
-      if (!gameState.player2_scope) gameState.player2_scope = 0;
-      if (!gameState.board_cards) gameState.board_cards = [];
-      checkLobby();
-      render();
-    }
-  } catch (err) {
-    console.error(err);
-    await forceReset();
+  if (error || !data || !data.board_cards || !data.player1_hand || !data.player2_hand) {
+    await resetRoomForce();
+  } else {
+    gameState = data;
+    if (!gameState.player1_captured) gameState.player1_captured = [];
+    if (!gameState.player2_captured) gameState.player2_captured = [];
+    if (!gameState.player1_scope) gameState.player1_scope = 0;
+    if (!gameState.player2_scope) gameState.player2_scope = 0;
+    checkLobby();
+    render();
   }
-  
-  // Aggiornamento periodico leggero ogni 3 secondi per sincronizzare senza blocchi
-  setTimeout(initRoom, 3000);
+  subscribeRealtime();
 }
 
-async function forceReset() {
+async function resetRoomForce() {
   const deck = makeDeck();
-  gameState = {
+  const newGame = {
     room_id: ROOM_ID,
     board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
     player1_id: null,
@@ -245,20 +237,36 @@ async function forceReset() {
     deck: deck,
     chat: []
   };
-  await supabaseClient.from('scopa_rooms').upsert(gameState);
+  await supabaseClient.from('scopa_rooms').upsert(newGame);
+  gameState = newGame;
   checkLobby();
   render();
 }
 
 function checkLobby() {
+  const lobby = document.getElementById("lobbyOverlay");
   if (!gameState.player1_id || !gameState.player2_id) {
-    document.getElementById("lobbyOverlay").style.display = "flex";
-    document.getElementById("btnG1").textContent = gameState.player1_id ? `G1: ${gameState.player1_id} (Occupato)` : "Prendi posto come G1";
-    document.getElementById("btnG2").textContent = gameState.player2_id ? `G2: ${gameState.player2_id} (Occupato)` : "Prendi posto come G2";
-    if (gameState.player1_id) document.getElementById("btnG1").disabled = true;
-    if (gameState.player2_id) document.getElementById("btnG2").disabled = true;
+    lobby.style.display = "flex";
+    const btn1 = document.getElementById("btnG1");
+    const btn2 = document.getElementById("btnG2");
+    
+    if (gameState.player1_id) {
+      btn1.textContent = `G1: ${gameState.player1_id} (Occupato)`;
+      btn1.disabled = true;
+    } else {
+      btn1.textContent = "Prendi posto come G1";
+      btn1.disabled = false;
+    }
+
+    if (gameState.player2_id) {
+      btn2.textContent = `G2: ${gameState.player2_id} (Occupato)`;
+      btn2.disabled = true;
+    } else {
+      btn2.textContent = "Prendi posto come G2";
+      btn2.disabled = false;
+    }
   } else {
-    document.getElementById("lobbyOverlay").style.display = "none";
+    lobby.style.display = "none";
   }
 }
 
@@ -271,6 +279,19 @@ async function joinAs(role) {
   await updateRemoteState();
   checkLobby();
   render();
+}
+
+function subscribeRealtime() {
+  supabaseClient
+    .channel('public:scopa_rooms_v4')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
+      if(payload.new) {
+        gameState = payload.new;
+        checkLobby();
+        render();
+      }
+    })
+    .subscribe();
 }
 
 async function updateRemoteState() {
@@ -410,4 +431,31 @@ function render() {
   if (myHand && myRole !== 'none') {
     myHand.forEach(c => {
       const im = document.createElement("img");
-      im.className = "card" +
+      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
+      im.src = imageURL(c);
+      if(isMyTurn) {
+        im.onclick = () => { selectedCardId = c.id; render(); };
+      }
+      pArea.appendChild(im);
+    });
+  } else {
+    const info = document.createElement("div");
+    info.style.fontSize = "8px";
+    info.style.color = "#ffe7a7";
+    info.textContent = "Usa il menu iniziale per sederti e partecipare alla partita.";
+    pArea.appendChild(info);
+  }
+
+  const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
+  if (oppHand) {
+    oppHand.forEach(() => {
+      const b = document.createElement("div");
+      b.className = "card back";
+      oArea.appendChild(b);
+    });
+  }
+
+  if (gameState.deck) {
+    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
+  }
+
