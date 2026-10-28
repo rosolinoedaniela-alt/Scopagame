@@ -2,112 +2,141 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Scopa Monopolygoita</title>
 <style>
 *{box-sizing:border-box}
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
-body{
+html, body {
  margin:0;
  padding:0;
+ width:100%;
+ height:100vh;
+ overflow:hidden !important; /* Blocca definitivamente lo scroll */
  background:radial-gradient(ellipse at top,#287a50,#061c14 78%);
  color:var(--cream);
  font-family:Arial,sans-serif;
  text-align:center;
- height:100vh;
+}
+
+body {
  display:flex;
  flex-direction:column;
  justify-content:space-between;
- overflow:hidden;
+ padding:4px 6px;
 }
 
-header{
- padding:6px 10px;
+/* HEADER ULTRA COMPATTO */
+header {
+ padding:2px 5px;
  background:linear-gradient(135deg,#08291d,#1c6945,#08291d);
  border-bottom:1px solid var(--gold);
+ border-radius:8px;
  flex-shrink:0;
 }
-.brand{font-size:9px;letter-spacing:2px;color:var(--gold)}
-h1{margin:2px 0;color:var(--gold);font-size:18px;letter-spacing:1px}
-#score{font-size:13px;font-weight:bold;margin-top:2px}
-#connectionStatus{font-size:10px;color:#f5d58b}
+.brand{font-size:8px;letter-spacing:1px;color:var(--gold)}
+h1{margin:1px 0;color:var(--gold);font-size:15px;letter-spacing:1px}
+#score{font-size:11px;font-weight:bold;margin:1px 0}
+#connectionStatus{font-size:9px;color:#f5d58b}
 
-main{
+/* CONTENITORE CENTRALE */
+main {
  flex:1;
  display:flex;
  flex-direction:column;
- justify-content:space-evenly;
- padding:5px;
- max-width:500px;
+ justify-content:space-between;
+ gap:4px;
+ max-width:480px;
  margin:auto;
  width:100%;
+ padding:2px 0;
 }
 
-.panel{
- margin:3px 0;
- padding:4px;
+.panel {
+ margin:0;
+ padding:3px;
  border:1px solid #f5d58b77;
- border-radius:12px;
+ border-radius:10px;
  background:linear-gradient(145deg,#ffffff12,#00000022);
+ display:flex;
+ flex-direction:column;
+ justify-content:center;
+ align-items:center;
 }
 
-.label{font-size:10px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:3px}
-.area{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:nowrap;min-height:55px;padding:2px}
+.label{font-size:9px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:2px}
 
-#table{
+/* AREE CARTE RIMPICCIOLITE */
+.area{
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ gap:4px;
+ flex-wrap:nowrap;
+ min-height:50px;
+ width:100%;
+ padding:1px;
+}
+
+#table {
  background:radial-gradient(ellipse,#258456,#0b4931);
- border:2px double #f5d58b;
- min-height:85px;
+ border:1px double #f5d58b;
+ min-height:65px;
 }
-#remaining{
+
+#remaining {
  display:inline-block;
  margin-bottom:2px;
- padding:2px 10px;
+ padding:1px 8px;
  border:1px solid var(--gold);
- border-radius:15px;
+ border-radius:10px;
  background:#05291d;
  color:#ffe7a7;
- font-size:11px;
+ font-size:10px;
 }
 
-.card{
- width:clamp(38px, 12vw, 55px);
+/* CARTE MOLTO PIÙ PICCOLE */
+.card {
+ width:clamp(32px, 10vw, 45px);
  height:auto;
  aspect-ratio:1324/2188;
  object-fit:contain;
  background:#fff8e9;
  border:1px solid #e6d5a7;
- border-radius:5px;
+ border-radius:4px;
  cursor:pointer;
  transition:transform .15s;
 }
-.card.selected{transform:translateY(-6px);outline:2px solid #ffe17c;box-shadow:0 0 10px #ffdf76}
-.back{
- height:62px;
- width:clamp(38px, 12vw, 55px);
+.card.selected{transform:translateY(-4px);outline:2px solid #ffe17c;box-shadow:0 0 8px #ffdf76}
+.back {
+ height:52px;
+ width:clamp(32px, 10vw, 45px);
  background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 7px);
- border:2px double #f2d8a4;
- border-radius:5px;
+ border:1px double #f2d8a4;
+ border-radius:4px;
 }
 
-button{
+/* PULSANTI E CHAT PICCOLI */
+button {
  border:1px solid #ffe3a0;
- border-radius:8px;
- padding:6px 14px;
- margin:2px;
+ border-radius:6px;
+ padding:4px 10px;
+ margin:1px;
  background:linear-gradient(135deg,#ffe6a0,#bd8e35);
  color:#183522;
  font-weight:bold;
- font-size:12px;
+ font-size:11px;
  cursor:pointer;
 }
-#message{font-size:11px;font-weight:bold;color:#ffe7a7;min-height:16px;margin:2px 0}
 
-#chat{margin-top:2px}
-#chatlog{height:45px;overflow-y:auto;background:#031c13aa;border-radius:6px;padding:4px;font-size:11px}
-.chatrow{display:flex;gap:4px;margin-top:3px}
-#chatInput{flex:1;border-radius:6px;padding:4px 8px;border:1px solid #c6a85e;font-size:11px}
-footer{font-size:9px;color:#d4c39c;padding:4px;flex-shrink:0}
+#message{font-size:10px;font-weight:bold;color:#ffe7a7;min-height:14px;margin:1px 0}
+
+#chat {padding:3px}
+#chatlog {height:30px;overflow-y:auto;background:#031c13aa;border-radius:4px;padding:3px;font-size:10px;width:100%;text-align:left}
+.chatrow {display:flex;gap:4px;margin-top:2px;width:100%}
+#chatInput {flex:1;border-radius:4px;padding:3px 6px;border:1px solid #c6a85e;font-size:10px}
+
+footer {font-size:8px;color:#d4c39c;padding:2px;flex-shrink:0}
 .hidden{display:none!important}
 </style>
 
@@ -118,7 +147,7 @@ footer{font-size:9px;color:#d4c39c;padding:4px;flex-shrink:0}
 <header>
  <div class="brand">MONOPOLYGOITA PRESENTA</div>
  <h1>♠ SCOPA ♣ (Multiplayer)</h1>
- <div id="connectionStatus">Connessione a Supabase in corso...</div>
+ <div id="connectionStatus">Connessione in corso...</div>
  <div id="score">Giocatore 1: 0 — Giocatore 2: 0</div>
 </header>
 
@@ -130,7 +159,7 @@ footer{font-size:9px;color:#d4c39c;padding:4px;flex-shrink:0}
 
  <section class="panel" id="table">
   <div class="label">✦ TAVOLO DA GIOCO ✦</div>
-  <div id="remaining">🂠 CARTE NEL MAZZO: --</div>
+  <div id="remaining">🂠 MAZZO: --</div>
   <div id="middle" class="area"></div>
  </section>
 
@@ -226,7 +255,7 @@ function imageURL(c){
 async function initMultiplayer() {
   document.getElementById("connectionStatus").textContent = "Ricerca tavolo...";
 
-  let { data: games, error } = await supabase
+  let { data: games } = await supabase
     .from('games')
     .select('*')
     .eq('chat_id', chatId)
@@ -238,7 +267,7 @@ async function initMultiplayer() {
     if (game.player1_id === userId) {
       currentGameId = game.id;
       playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "In attesa di un avversario...";
+      document.getElementById("connectionStatus").textContent = "In attesa di avversario...";
     } else {
       currentGameId = game.id;
       playerRole = 'player2';
@@ -278,7 +307,7 @@ async function initMultiplayer() {
     if(newGame) {
       currentGameId = newGame.id;
       playerRole = 'player1';
-      document.getElementById("connectionStatus").textContent = "Tavolo creato! In attesa del Giocatore 2...";
+      document.getElementById("connectionStatus").textContent = "In attesa di Giocatore 2...";
     }
   }
 
@@ -357,16 +386,16 @@ function render() {
   }
 
   if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 CARTE NEL MAZZO: " + gameState.deck.length;
+    document.getElementById("remaining").textContent = "🂠 MAZZO: " + gameState.deck.length;
   }
 
   const myTurn = (gameState.turn === userId && gameState.status === 'playing');
   document.getElementById("play").disabled = !myTurn || selectedCardId === null;
 
   if (gameState.status === 'waiting') {
-    say("In attesa che un altro giocatore entri...");
+    say("In attesa di un altro giocatore...");
   } else if (myTurn) {
-    say("Tocca a te! Scegli una carta e premi Gioca.");
+    say("Tocca a te! Scegli una carta e gioca.");
   } else {
     say("Turno dell'avversario...");
   }
