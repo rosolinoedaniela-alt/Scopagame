@@ -74,9 +74,8 @@ main {
 }
 
 .action-row { display:flex; align-items:center; gap:6px; width:100%; justify-content:center; margin-top:1px; }
-button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 10px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
+button { border:1px solid #ffe3a0; border-radius:4px; padding:3px 14px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:9px; cursor:pointer; }
 button:disabled{opacity:0.4;cursor:not-allowed}
-.btn-share { background:linear-gradient(135deg,#2196F3,#0D47A1); color:#fff; border-color:#90CAF9; }
 
 #chat { padding:2px 4px; flex-shrink:0; margin-bottom:2px; }
 #chatlog { height:22px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:2px; }
@@ -103,7 +102,7 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 <div id="limitOverlay">
  <div class="win-box">
   <h2>👁️ STANZA PIENA</h2>
-  <p style="font-size:11px; color:#fff; margin:10px 0;">La stanza ha già raggiunto il limite massimo di <b>3 spettatori</b>.</p>
+  <p style="font-size:11px; color:#fff; margin:10px 0;">La stanza ha raggiunto il limite massimo di <b>3 spettatori</b>.</p>
   <button onclick="Telegram.WebApp.close()">Chiudi</button>
  </div>
 </div>
@@ -140,7 +139,6 @@ button:disabled{opacity:0.4;cursor:not-allowed}
   <div id="player" class="area"></div>
   <div class="action-row">
    <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button class="btn-share" onclick="shareSpectatorLink()">👁️ Invita Spettatore</button>
   </div>
  </section>
 
@@ -197,18 +195,6 @@ function imageURL(c){
  return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
 }
 
-// Funzione di condivisione mascherata del link spettatore
-function shareSpectatorLink() {
-  const spectateUrl = "https://rosolinoedaniela-alt.github.io/Scopagame/?role=spectator";
-  const shareText = "👁️ Entra come SPETTATORE alla partita di Scopa!";
-  if (tg.openTelegramLink) {
-    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(spectateUrl)}&text=${encodeURIComponent(shareText)}`);
-  } else {
-    navigator.clipboard.writeText(spectateUrl);
-    alert("Link Spettatore copiato negli appunti!");
-  }
-}
-
 async function initRoom() {
   const { data, error } = await supabaseClient
     .from('scopa_rooms')
@@ -240,7 +226,6 @@ async function initRoom() {
     gameState = data;
     if (!gameState.spectators) gameState.spectators = [];
 
-    // Gestione Spettatori e Limite
     if (isSpectator) {
       if (!gameState.spectators.includes(userName)) {
         if (gameState.spectators.length >= 3) {
@@ -295,7 +280,6 @@ function render() {
 
   const isMyTurn = gameState.turn === myRole;
 
-  // Aggiorna conteggio spettatori
   const currentSpectators = gameState.spectators ? gameState.spectators.length : 0;
   document.getElementById("spectatorCountLabel").textContent = `💬 CHAT DELLA STANZA (Spettatori: ${currentSpectators}/3)`;
 
@@ -371,7 +355,10 @@ function render() {
     document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
   }
 
-  document.getElementById("score").textContent = `Punti - ${gameState.player1_id || 'P1'}: ${gameState.player1_score} | ${gameState.player2_id || 'P2'}: ${gameState.player2_score}`;
+  // Aggiornamento punteggio dinamico corretto
+  const p1Name = gameState.player1_id || 'P1';
+  const p2Name = gameState.player2_id || 'In attesa...';
+  document.getElementById("score").textContent = `Punti - ${p1Name}: ${gameState.player1_score} | ${p2Name}: ${gameState.player2_score}`;
   document.getElementById("play").disabled = isSpectator || !isMyTurn || selectedCardId === null;
 
   // Chat
