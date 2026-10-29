@@ -1,6 +1,7 @@
 const { Telegraf, Markup } = require('telegraf');
 8821144054:AAG0SourrPS
-const bot = new Telegraf('8821144054:AAG0SourrPSxSSsw6F9AVgC6uVEd79j8i7Q');
+const bot = new Telegraf(process.env.BOT_TOKEN);
+
 
 
 let gameRoom = {
