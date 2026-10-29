@@ -1,6 +1,6 @@
 const { Telegraf, Markup } = require('telegraf');
 
-const bot = new Telegraf('8821144054:AAG15Y4gbHiJD8ZUuIU-5bUQSljI2dBvLa0');
+const bot = new Telegraf('8821144054:AAG0SourrPSxSSsw6F9AVgC6uVEd79j8i7Q');
 
 let gameRoom = {
   players: [],
