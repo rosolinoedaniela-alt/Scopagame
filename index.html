@@ -164,7 +164,6 @@ try { if (tg.expand) tg.expand(); } catch(e){}
 const tgUser = tg.initDataUnsafe?.user;
 let userName = tgUser ? (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : null;
 
-// Fallback sicuro se aperto fuori da Telegram (crea o recupera un ID univoco locale per test)
 if (!userName) {
   userName = localStorage.getItem('scopa_guest_name');
   if (!userName) {
@@ -175,4 +174,89 @@ if (!userName) {
 
 const ROOM_ID = 'stanza_principale';
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
-const SUPABASE_KEY = 'Sb_publish
+const SUPABASE_KEY = 'Sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let gameState = null;
+let selectedCardId = null;
+
+const files = [
+  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
+  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
+  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+];
+
+function makeDeck(){
+ const d = files.map((file, i) => ({ id: i+1, rank: (i % 10) + 1, file }));
+ for(let i = d.length - 1; i > 0; i--){
+  const j = Math.floor(Math.random() * (i + 1));
+  [d[i], d[j]] = [d[j], d[i]];
+ }
+ return d;
+}
+
+function imageURL(c){
+ if (!c || !c.file) return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent("01 Asso di denari.jpg");
+ let fname = c.file;
+ if(fname.toLowerCase().includes("dieci di bastoni")) {
+   fname = "40 Dieci di Bastoni.jpg";
+ }
+ return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
+}
+
+async function initRoom() {
+  const { data, error } = await supabaseClient
+    .from('scopa_rooms')
+    .select('*')
+    .eq('room_id', ROOM_ID)
+    .single();
+
+  if (error || !data || !data.board_cards || data.board_cards.length === 0) {
+    const deck = makeDeck();
+    const newGame = {
+      room_id: ROOM_ID,
+      board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
+      player1_id: null,
+      player2_id: null,
+      player1_hand: [deck.pop(), deck.pop(), deck.pop()],
+      player2_hand: [deck.pop(), deck.pop(), deck.pop()],
+      player1_score: 0,
+      player2_score: 0,
+      player1_captured: [],
+      player2_captured: [],
+      player1_scope: 0,
+      player2_scope: 0,
+      turn: 'player1',
+      deck: deck,
+      chat: []
+    };
+    await supabaseClient.from('scopa_rooms').upsert(newGame);
+    gameState = newGame;
+  } else {
+    gameState = data;
+    
+    // Blindatura assoluta: se mancano le carte sul tavolo o nelle mani, le ripristiniamo senza toccare i punteggi
+    let needsSync = false;
+    if (!gameState.board_cards || gameState.board_cards.length === 0) {
+      const deck = gameState.deck && gameState.deck.length >= 4 ? gameState.deck : makeDeck();
+      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+      gameState.deck = deck;
+      needsSync = true;
+    }
+    if (!gameState.player1_hand || gameState.player1_hand.length === 0) {
+      const deck = gameState.deck && gameState.deck.length >= 3 ? gameState.deck : makeDeck();
+      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.deck = deck;
+      needsSync = true;
+    }
+    if (!gameState.player2_hand || gameState.player2_hand.length === 0) {
+      const deck = gameState.deck && gameState.deck.length >= 3 ? gameState.deck : makeDeck();
+      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
+      gameState.deck = deck;
+      needsSync = true;
+    }
+
+    if (!gameState.player1_captured) gameState.player1_captured = [];
+    if (!gameState.player2_captured) gameState.
