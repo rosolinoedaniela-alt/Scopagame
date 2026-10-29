@@ -99,13 +99,15 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 
 <div id="lobbyOverlay">
  <div class="win-box">
-  <h2>🎮 SCEGLI I GIOCATORI</h2>
-  <p style="font-size:9px; color:#fff; margin:8px 0;">Assegna i posti per iniziare la sfida:</p>
-  <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
-   <button onclick="joinAs('player1')" id="btnG1" style="padding:6px;">Prendi posto come G1</button>
-   <button onclick="joinAs('player2')" id="btnG2" style="padding:6px;">Prendi posto come G2</button>
+  <h2>🎮 ACCEDI ALLA PARTITA</h2>
+  <p style="font-size:9px; color:#fff; margin:6px 0;">Inserisci il tuo nome o nickname:</p>
+  <input id="nicknameInput" maxlength="20" placeholder="Il tuo nome..." style="width:100%; padding:4px; font-size:9px; border-radius:3px; border:1px solid var(--gold); margin-bottom:8px; text-align:center;">
+  <p style="font-size:9px; color:#fff; margin:4px 0;">Scegli il tuo posto:</p>
+  <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
+   <button onclick="joinAsCustom('player1')" id="btnG1" style="padding:6px;">Entra come Giocatore 1</button>
+   <button onclick="joinAsCustom('player2')" id="btnG2" style="padding:6px;">Entra come Giocatore 2</button>
   </div>
-  <p id="lobbyStatus" style="font-size:8px; color:#a3f7bf; margin-top:10px;"></p>
+  <p id="lobbyStatus" style="font-size:8px; color:#a3f7bf; margin-top:8px;"></p>
  </div>
 </div>
 
@@ -160,8 +162,8 @@ button:disabled{opacity:0.4;cursor:not-allowed}
 const tg = window.Telegram?.WebApp || {};
 try { if (tg.expand) tg.expand(); } catch(e){}
 
-const user = tg.initDataUnsafe?.user;
-const userName = user ? (user.username ? '@' + user.username : user.first_name) : 'Ospite';
+const tgUser = tg.initDataUnsafe?.user;
+let userName = tgUser ? (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : (localStorage.getItem('scopa_nickname') || '');
 
 const ROOM_ID = 'stanza_principale';
 const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
@@ -204,7 +206,7 @@ async function initRoom() {
     .eq('room_id', ROOM_ID)
     .single();
 
-  if (error || !data) {
+  if (error || !data || !data.board_cards || data.board_cards.length === 0) {
     const deck = makeDeck();
     const newGame = {
       room_id: ROOM_ID,
@@ -227,7 +229,6 @@ async function initRoom() {
     gameState = newGame;
   } else {
     gameState = data;
-    // Controllo di sicurezza fondamentale: se il tavolo o le mani sono vuote, li riempiamo senza toccare i punteggi
     let needsUpdate = false;
     if (!gameState.board_cards || gameState.board_cards.length === 0) {
       const deck = gameState.deck && gameState.deck.length >= 4 ? gameState.deck : makeDeck();
@@ -266,6 +267,14 @@ async function initRoom() {
 
 function checkLobby() {
   const lobby = document.getElementById("lobbyOverlay");
+  
+  // Se l'utente corrente è già registrato in un posto, chiudi la lobby
+  if (userName && (userName === gameState.player1_id || userName === gameState.player2_id)) {
+    lobby.style.display = "none";
+    return;
+  }
+
+  // Se uno dei due posti è vuoto, mostra la lobby per fare scegliere il nome e il posto
   if (!gameState.player1_id || !gameState.player2_id) {
     lobby.style.display = "flex";
     const btn1 = document.getElementById("btnG1");
@@ -291,7 +300,17 @@ function checkLobby() {
   }
 }
 
-async function joinAs(role) {
+async function joinAsCustom(role) {
+  const inputVal = document.getElementById("nicknameInput").value.trim();
+  if (!userName) {
+    if (!inputVal) {
+      alert("Per favore inserisci il tuo nome prima di entrare!");
+      return;
+    }
+    userName = inputVal;
+    localStorage.setItem('scopa_nickname', userName);
+  }
+
   if (role === 'player1' && !gameState.player1_id) {
     gameState.player1_id = userName;
   } else if (role === 'player2' && !gameState.player2_id) {
@@ -304,7 +323,7 @@ async function joinAs(role) {
 
 function subscribeRealtime() {
   supabaseClient
-    .channel('room_channel_v9')
+    .channel('room_channel_v10')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
       if(payload.new) {
         gameState = payload.new;
