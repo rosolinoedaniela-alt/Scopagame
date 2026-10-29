@@ -237,21 +237,21 @@ async function initRoom() {
   } else {
     gameState = data;
     
-    // Blindatura assoluta: se mancano le carte sul tavolo o nelle mani, le ripristiniamo senza toccare i punteggi
+    // Controllo di validità rigoroso per evitare qualsiasi schermo vuoto
     let needsSync = false;
-    if (!gameState.board_cards || gameState.board_cards.length === 0) {
+    if (!gameState.board_cards || !Array.isArray(gameState.board_cards) || gameState.board_cards.length === 0) {
       const deck = gameState.deck && gameState.deck.length >= 4 ? gameState.deck : makeDeck();
       gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
       gameState.deck = deck;
       needsSync = true;
     }
-    if (!gameState.player1_hand || gameState.player1_hand.length === 0) {
+    if (!gameState.player1_hand || !Array.isArray(gameState.player1_hand) || gameState.player1_hand.length === 0) {
       const deck = gameState.deck && gameState.deck.length >= 3 ? gameState.deck : makeDeck();
       gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
       gameState.deck = deck;
       needsSync = true;
     }
-    if (!gameState.player2_hand || gameState.player2_hand.length === 0) {
+    if (!gameState.player2_hand || !Array.isArray(gameState.player2_hand) || gameState.player2_hand.length === 0) {
       const deck = gameState.deck && gameState.deck.length >= 3 ? gameState.deck : makeDeck();
       gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
       gameState.deck = deck;
@@ -259,4 +259,39 @@ async function initRoom() {
     }
 
     if (!gameState.player1_captured) gameState.player1_captured = [];
-    if (!gameState.player2_captured) gameState.
+    if (!gameState.player2_captured) gameState.player2_captured = [];
+    if (!gameState.player1_scope) gameState.player1_scope = 0;
+    if (!gameState.player2_scope) gameState.player2_scope = 0;
+    if (!gameState.chat) gameState.chat = [];
+
+    if (needsSync) {
+      await updateRemoteState();
+    }
+  }
+  
+  checkLobby();
+  render();
+  subscribeRealtime();
+}
+
+function checkLobby() {
+  const lobby = document.getElementById("lobbyOverlay");
+  const slot1 = document.getElementById("slot1Info");
+  const slot2 = document.getElementById("slot2Info");
+  const enterBtn = document.getElementById("enterBtn");
+  const lobbyDesc = document.getElementById("lobbyDesc");
+
+  slot1.textContent = "G1: " + (gameState.player1_id ? gameState.player1_id : "Libero (In attesa...)");
+  slot2.textContent = "G2: " + (gameState.player2_id ? gameState.player2_id : "Libero (In attesa...)");
+
+  if (userName === gameState.player1_id || userName === gameState.player2_id) {
+    lobby.style.display = "none";
+    return;
+  }
+
+  lobby.style.display = "flex";
+
+  if (!gameState.player1_id || !gameState.player2_id) {
+    lobbyDesc.textContent = "Stato partecipanti nella stanza:";
+    enterBtn.style.display = "block";
+    enterBtn.textContent = "Entra in partita come " + (!gameState.player1_id ? "Giocatore 1" : "Giocatore 2
