@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="it"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Collega bot Scopa di prova</title>
+<title>Diagnostica bot Scopa di prova</title>
 <style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:#09271d;color:#f7edcf;font:16px system-ui;padding:20px;box-sizing:border-box}
 main{width:min(100%,440px);background:#12392b;border:1px solid #c9a85c;border-radius:18px;padding:24px;box-sizing:border-box}
@@ -11,7 +11,7 @@ button{background:#c9a85c;color:#17251c;border:0;font-weight:700}
 #status{overflow-wrap:anywhere;margin-top:16px}
 </style>
 <main>
-<h1>♠ Collegamento Scopa di prova</h1>
+<h1>♠ Diagnostica Scopa di prova</h1>
 <p>Inserisci il valore di <b>SCOPA_STAGING_WEBHOOK_SECRET</b> già salvato nei Secrets Supabase. Questa verifica legge getMe e getWebhookInfo: non modifica il webhook e non mostra il token.</p>
 <input id="secret" type="password" autocomplete="off" placeholder="Secret webhook staging">
 <button id="go">Diagnostica Telegram</button>
@@ -27,7 +27,7 @@ document.getElementById("go").addEventListener("click",async()=>{
  try{
   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"diagnostics",setupSecret:secret})});
   const j=await r.json();
-  status.textContent=r.ok&&j.ok?"Webhook del bot di prova collegato correttamente.":"Errore: "+(j.error||j.message||"controlla il secret e i Secrets Supabase.");
+  status.textContent=r.ok&&j.ok?"Diagnostica completata: "+JSON.stringify(j.diagnostics):"Errore: "+(j.error||j.message||"controlla il secret e i Secrets Supabase.");
   
  }catch(e){status.textContent="Errore di rete. Riprova tra poco.";}
 });
