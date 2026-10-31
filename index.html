@@ -681,7 +681,7 @@ function mpApply(data){
  if(!(st.chat||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
  log.scrollTop=log.scrollHeight;
  if(st.status==='waiting')mpSetMessage('In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;setTimeout(()=>{try{mpTg.close();}catch(e){}},5000);}}
+ else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
  else mpSetMessage(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…');
  render();
 }
