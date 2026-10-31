@@ -15,6 +15,7 @@ button{background:#c9a85c;color:#17251c;border:0;font-weight:700}
 <p>Inserisci il valore di <b>SCOPA_STAGING_WEBHOOK_SECRET</b> già salvato nei Secrets Supabase. Questa verifica legge getMe e getWebhookInfo: non modifica il webhook e non mostra il token.</p>
 <input id="secret" type="password" autocomplete="off" placeholder="Secret webhook staging">
 <button id="go">Diagnostica Telegram</button>
+<button id="register" type="button">Configura webhook di prova</button>
 <p id="status" role="status"></p>
 </main>
 <script>
@@ -30,5 +31,20 @@ document.getElementById("go").addEventListener("click",async()=>{
   status.textContent=r.ok&&j.ok?"Diagnostica completata: "+JSON.stringify(j.diagnostics):"Errore: "+(j.error||j.message||"controlla il secret e i Secrets Supabase.");
   
  }catch(e){status.textContent="Errore di rete. Riprova tra poco.";}
+});
+document.getElementById("register").addEventListener("click",async()=>{
+ const secret=document.getElementById("secret").value;
+ const status=document.getElementById("status");
+ if(!secret){status.textContent="Inserisci il secret.";return;}
+ status.textContent="Configurazione webhook di prova in corso…";
+ try{
+  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"registerWebhook",setupSecret:secret})});
+  const j=await r.json();
+  if(!r.ok||!j.ok){status.textContent="Errore configurazione: "+(j.error||j.message||"richiesta non riuscita");return;}
+  status.textContent="Webhook registrato. Verifico la configurazione…";
+  const v=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"diagnostics",setupSecret:secret})});
+  const d=await v.json();
+  status.textContent=v.ok&&d.ok?"Configurazione verificata: "+JSON.stringify(d.diagnostics):"Webhook inviato; verifica non riuscita: "+(d.error||d.message||"errore");
+ }catch(e){status.textContent="Errore di rete durante la configurazione. Non ripetere subito: controlliamo prima lo stato.";}
 });
 </script></html>
