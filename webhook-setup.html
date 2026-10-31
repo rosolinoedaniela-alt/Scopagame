@@ -12,9 +12,9 @@ button{background:#c9a85c;color:#17251c;border:0;font-weight:700}
 </style>
 <main>
 <h1>♠ Collegamento Scopa di prova</h1>
-<p>Inserisci il valore di <b>SCOPA_STAGING_WEBHOOK_SECRET</b> che hai salvato nei Secrets Supabase. Il valore viene inviato direttamente alla funzione di prova; non viene salvato in questa pagina.</p>
+<p>Inserisci il valore di <b>SCOPA_STAGING_WEBHOOK_SECRET</b> già salvato nei Secrets Supabase. Questa verifica legge getMe e getWebhookInfo: non modifica il webhook e non mostra il token.</p>
 <input id="secret" type="password" autocomplete="off" placeholder="Secret webhook staging">
-<button id="go">Collega il webhook di prova</button>
+<button id="go">Diagnostica Telegram</button>
 <p id="status" role="status"></p>
 </main>
 <script>
@@ -23,12 +23,12 @@ document.getElementById("go").addEventListener("click",async()=>{
  const secret=document.getElementById("secret").value;
  const status=document.getElementById("status");
  if(!secret){status.textContent="Inserisci il secret.";return;}
- status.textContent="Collegamento in corso…";
+ status.textContent="Verifica comunicazione con Telegram…";
  try{
-  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"registerWebhook",setupSecret:secret})});
+  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"diagnostics",setupSecret:secret})});
   const j=await r.json();
   status.textContent=r.ok&&j.ok?"Webhook del bot di prova collegato correttamente.":"Errore: "+(j.error||j.message||"controlla il secret e i Secrets Supabase.");
-  if(r.ok&&j.ok){document.getElementById("secret").value="";document.getElementById("go").disabled=true;}
+  
  }catch(e){status.textContent="Errore di rete. Riprova tra poco.";}
 });
 </script></html>
