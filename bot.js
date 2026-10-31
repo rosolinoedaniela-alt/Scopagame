@@ -1,57 +1,7 @@
-const { Telegraf, Markup } = require('telegraf');
-8821144054:AAG0SourrPS
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
-
-
-let gameRoom = {
-  players: [],
-  maxPlayers: 2
-};
-
-bot.command('inizia', (ctx) => {
-  updateGameMessage(ctx);
-});
-
-bot.action('join_game', (ctx) => {
-  const user = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
-
-  if (!gameRoom.players.includes(user) && gameRoom.players.length < gameRoom.maxPlayers) {
-    gameRoom.players.push(user);
-    ctx.answerCbQuery('Ti sei seduto al tavolo!');
-  } else if (gameRoom.players.includes(user)) {
-    ctx.answerCbQuery('Sei già seduto in questa partita!');
-  } else {
-    ctx.answerCbQuery('La stanza è al completo!');
-  }
-  updateGameMessage(ctx, true);
-});
-
-bot.action('leave_game', (ctx) => {
-  const user = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
-  gameRoom.players = gameRoom.players.filter(p => p !== user);
-  ctx.answerCbQuery('Hai abbandonato il tavolo.');
-  updateGameMessage(ctx, true);
-});
-
-function updateGameMessage(ctx, edit = false) {
-  let playerListText = gameRoom.players.length > 0 
-    ? gameRoom.players.map((p, index) => `${index + 1}. ${p}`).join('\n')
-    : 'Nessun giocatore seduto.';
-
-  const messageText = `🂡 **PARTITA DI SCOPA IN CORSO** 🂡\n\n**Giocatori seduti:**\n${playerListText}`;
-
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('🎮 Entra in partita', 'join_game')],
-    [Markup.button.callback('🚪 Abbandona', 'leave_game')],
-    [Markup.button.url('🎲 Apri Tavolo WebApp', 'https://rosolinoedaniana-alt.github.io')]
-  ]);
-
-  if (edit) {
-    ctx.editMessageText(messageText, { parse_mode: 'Markdown', ...keyboard }).catch(() => {});
-  } else {
-    ctx.reply(messageText, { parse_mode: 'Markdown', ...keyboard });
-  }
-}
-
-bot.launch();
+// File storico disattivato.
+// Non inserire mai token Telegram nel codice o nel repository.
+// Il bot Scopa deve essere gestito esclusivamente dalla Supabase Edge Function
+// "scopa-telegram", usando i segreti configurati nel progetto.
+// Prima di riattivare qualsiasi bot, revoca il token che era presente nella
+// versione precedente di questo file tramite BotFather e configura un token nuovo
+// come segreto server-side BOT_TOKEN / TELEGRAM_BOT_TOKEN.
