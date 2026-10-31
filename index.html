@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Scopa Monopolygoita</title>
+<title>Scopa di Monopolygoita</title>
 <style>
 *{box-sizing:border-box}
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
@@ -187,8 +187,8 @@ main {
 </head>
 <body>
 <header>
- <div class="brand">MONOPOLYGOITA PRESENTA</div>
- <h1>♠ SCOPA ♣</h1>
+ <div class="brand">MONOPOLY DANI PRESENTA</div>
+ <h1>♠ SCOPA DI MONOPOLYGOITA ♣</h1>
  <div style="color:#f9e5b1">Carte napoletane</div>
  <div id="score">In attesa dei giocatori…</div>
  <div class="scoreline"><div id="progress"></div></div>
@@ -641,7 +641,7 @@ document.getElementById("chatInput").addEventListener("keydown",e=>{
 const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegram';
 const mpTg=window.Telegram?.WebApp;
 let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='';
-let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false;
+let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0;
 function mpCard(c){return {...c,value:Number(c.rank),rank:Number(c.rank)};}
 function mpSetMessage(t){document.getElementById('message').textContent=t||'';}
 function mpSetNames(){
@@ -663,7 +663,7 @@ function mpApply(data){
  const oldSelected=selected;
  const oldCaptureOptions=mpCaptureOptions;
  const oldChosen=mpChosenCapture;
- mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};
+ mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};const scopaEvent=Number(st.scopaEvent||0);if(scopaEvent>mpLastScopaEvent)celebrate();mpLastScopaEvent=scopaEvent;
  hand=(st.hand||[]).map(mpCard);cpu=Array.from({length:st.opponentHandCount||0},()=>({}));table=(st.board||[]).map(mpCard);
  const sameBoard=oldBoard===JSON.stringify(table.map(c=>c.id));
  mpCaptureOptions=sameBoard?oldCaptureOptions:[];mpChosenCapture=sameBoard?oldChosen:null;
@@ -681,7 +681,7 @@ function mpApply(data){
  if(!(st.chat||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
  log.scrollTop=log.scrollHeight;
  if(st.status==='waiting')mpSetMessage('In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;setTimeout(()=>{try{mpTg.close();}catch(e){}},7000);}}
+ else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;setTimeout(()=>{try{mpTg.close();}catch(e){}},5000);}}
  else mpSetMessage(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…');
  render();
 }
@@ -737,7 +737,7 @@ async function playPlayer(){
   }else captureIds=choices[0].map(c=>c.id);
  }
  mpBusy=true;document.getElementById('play').disabled=true;
- try{const d=await mpCall({action:'move',cardId:card.id,captureIds});if(d.scopa)celebrate();mpApply(d);}catch(e){mpSetMessage(e.message);await mpRefresh();}
+ try{const d=await mpCall({action:'move',cardId:card.id,captureIds});mpApply(d);}catch(e){mpSetMessage(e.message);await mpRefresh();}
  finally{mpBusy=false;document.getElementById('play').disabled=turn!=='player'||finished||selected===null;}
 }
 async function sendChat(){
