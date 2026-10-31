@@ -1050,9 +1050,27 @@ async function playPlayer(){
  try{const d=await mpCall({action:'move',cardId:card.id,captureIds});mpApply(d);}catch(e){mpSetMessage(e.message);await mpRefresh();}
  finally{mpBusy=false;document.getElementById('play').disabled=turn!=='player'||finished||selected===null;}
 }
+let mpChatBusy=false;
 async function sendChat(){
- const input=document.getElementById('chatInput'),value=input.value.trim();if(!value||mpBusy)return;
- mpBusy=true;try{const d=await mpCall({action:'chat',text:value});input.value='';mpApply(d);}catch(e){mpSetMessage(e.message);}finally{mpBusy=false;}
+ const input=document.getElementById('chatInput'),value=input.value.trim();
+ if(!value||mpChatBusy)return;
+ if(!mpRoom||!mpTg?.initData){mpSetMessage('Apri la stanza dal pulsante Telegram per usare la chat.');return;}
+ mpChatBusy=true;
+ const sendButton=input.parentElement.querySelector('button');
+ if(sendButton){sendButton.disabled=true;sendButton.textContent='Invio…';}
+ try{
+  let d;
+  try{d=await mpCall({action:'chat',text:value});}
+  catch(firstError){
+   if(/contemporane|aggiorna|version/i.test(firstError.message)){
+    const fresh=await mpCall({action:'state'});mpApply(fresh);
+    d=await mpCall({action:'chat',text:value});
+   }else throw firstError;
+  }
+  if(input.value.trim()===value)input.value='';
+  mpApply(d);
+ }catch(e){mpSetMessage('Messaggio non inviato: '+e.message);}
+ finally{mpChatBusy=false;if(sendButton){sendButton.disabled=false;sendButton.textContent='Invia';}}
 }
 function continueGame(){document.getElementById('modal').classList.add('hidden');mpRefresh();}
 document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
