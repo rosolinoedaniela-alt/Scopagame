@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="it"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Collega bot Scopa di prova</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#09271d;color:#f7edcf;font:16px system-ui;padding:20px;box-sizing:border-box}
+main{width:min(100%,440px);background:#12392b;border:1px solid #c9a85c;border-radius:18px;padding:24px;box-sizing:border-box}
+h1{font-size:22px}p{line-height:1.5;color:#e7dfc7}
+input,button{width:100%;box-sizing:border-box;padding:14px;border-radius:10px;font:inherit;margin-top:12px}
+input{background:#071d16;color:white;border:1px solid #8d7849}
+button{background:#c9a85c;color:#17251c;border:0;font-weight:700}
+#status{overflow-wrap:anywhere;margin-top:16px}
+</style>
+<main>
+<h1>♠ Collegamento Scopa di prova</h1>
+<p>Inserisci il valore di <b>SCOPA_STAGING_WEBHOOK_SECRET</b> che hai salvato nei Secrets Supabase. Il valore viene inviato direttamente alla funzione di prova; non viene salvato in questa pagina.</p>
+<input id="secret" type="password" autocomplete="off" placeholder="Secret webhook staging">
+<button id="go">Collega il webhook di prova</button>
+<p id="status" role="status"></p>
+</main>
+<script>
+const endpoint="https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegram-staging";
+document.getElementById("go").addEventListener("click",async()=>{
+ const secret=document.getElementById("secret").value;
+ const status=document.getElementById("status");
+ if(!secret){status.textContent="Inserisci il secret.";return;}
+ status.textContent="Collegamento in corso…";
+ try{
+  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"registerWebhook",setupSecret:secret})});
+  const j=await r.json();
+  status.textContent=r.ok&&j.ok?"Webhook del bot di prova collegato correttamente.":"Errore: "+(j.error||j.message||"controlla il secret e i Secrets Supabase.");
+  if(r.ok&&j.ok){document.getElementById("secret").value="";document.getElementById("go").disabled=true;}
+ }catch(e){status.textContent="Errore di rete. Riprova tra poco.";}
+});
+</script></html>
