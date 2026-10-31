@@ -2,618 +2,753 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Scopa Monopolygoita Online</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scopa Monopolygoita</title>
 <style>
 *{box-sizing:border-box}
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
-html, body {
- margin:0; padding:0; width:100%; height:100vh; height:100dvh;
- overflow:hidden !important; background:radial-gradient(ellipse at top,#1b5e3f,#04150e 85%);
- color:var(--cream); font-family:Arial,sans-serif; text-align:center;
- display:flex; flex-direction:column; justify-content:space-between; padding:2px 4px;
+body{
+ margin:0;
+ background:radial-gradient(ellipse at top,#287a50,#061c14 78%);
+ color:var(--cream);font-family:Arial,sans-serif;text-align:center;min-height:100vh
+}
+header{
+ padding:18px 10px 14px;
+ background:linear-gradient(135deg,#08291d,#1c6945,#08291d);
+ border-bottom:2px solid var(--gold);
+ box-shadow:0 5px 22px #0008
+}
+.brand{font-size:12px;letter-spacing:4px;color:var(--gold)}
+h1{margin:5px 0;color:var(--gold);font-size:clamp(25px,7vw,38px);letter-spacing:3px;text-shadow:0 2px 14px #d2a64b88}
+#score{font-size:18px;font-weight:bold;margin-top:9px}
+.scoreline{max-width:350px;margin:9px auto 0;background:#ffffff22;border-radius:20px;height:8px;overflow:hidden}
+#progress{height:100%;width:0;background:linear-gradient(90deg,#c69a42,#fff0a8);transition:width .4s}
+main{max-width:760px;margin:auto;padding:10px}
+.panel{
+ margin:12px 0;padding:12px 8px;
+ border:1px solid #f5d58b99;border-radius:18px;
+ background:linear-gradient(145deg,#ffffff12,#00000022);
+ box-shadow:0 10px 28px #0005,inset 0 1px #ffffff12
+}
+.label{font-size:12px;letter-spacing:2px;color:var(--gold);font-weight:bold;margin:2px 0 9px}
+.area{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;min-height:80px;padding:5px}
+#table{
+ background:radial-gradient(ellipse,#258456,#0b4931);
+ border:3px double #f5d58b;box-shadow:inset 0 0 30px #001d10,0 8px 24px #0006;
+ min-height:150px
+}
+#remaining{
+ display:inline-block;margin:0 auto 10px;padding:9px 16px;
+ border:2px solid var(--gold);border-radius:25px;
+ background:linear-gradient(135deg,#05291d,#174c35);
+ color:#ffe7a7;font-weight:bold;font-size:15px;
+ box-shadow:0 0 12px #f5d58b33
+}
+.card{
+ width:clamp(49px,14vw,82px);height:auto;aspect-ratio:1324/2188;
+ object-fit:contain;background:#fff8e9;border:2px solid #e6d5a7;
+ border-radius:7px;box-shadow:0 4px 9px #00150c99;
+ cursor:pointer;transition:transform .18s,box-shadow .18s
+}
+.card.selected{transform:translateY(-9px);outline:3px solid #ffe17c;box-shadow:0 0 15px #ffdf76}
+.card.capture-option{outline:3px solid #62e6a0;box-shadow:0 0 13px #62e6a0;cursor:pointer}
+.card.capture-picked{outline:4px solid #ffe17c;box-shadow:0 0 18px #ffd34d;transform:translateY(-5px)}
+#captureChoices{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;width:100%;padding:4px}
+#captureChoices button{font-size:10px;padding:5px 7px;margin:1px}
+.back{
+ height:105px;background:repeating-linear-gradient(45deg,#8b2530,#8b2530 5px,#f2d8a4 6px,#8b2530 9px);
+ border:3px double #f2d8a4;border-radius:7px;width:clamp(49px,14vw,82px)
+}
+button{
+ border:1px solid #ffe3a0;border-radius:12px;padding:12px 16px;margin:4px;
+ background:linear-gradient(135deg,#ffe6a0,#bd8e35);color:#183522;
+ font-weight:bold;font-size:14px;box-shadow:0 3px 9px #0003;cursor:pointer
+}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.4;cursor:default}
+#message{min-height:0;padding:0;line-height:1.4;font-weight:bold;color:#ffe7a7}
+#chat{text-align:left}
+#chatlog{height:100px;overflow:auto;background:#031c13aa;border-radius:10px;padding:9px;font-size:13px;line-height:1.5}
+.chatrow{display:flex;gap:6px;margin-top:7px}
+#chatInput{min-width:0;flex:1;border-radius:9px;padding:11px;border:1px solid #c6a85e;background:#fdf3d7;color:#183522;font-size:14px}
+.note{font-size:11px;color:#d2c7a9;margin-top:7px}
+footer{font-size:11px;color:#d4c39c;padding:18px}
+.hidden{display:none!important}
+#modal{position:fixed;inset:0;z-index:10;background:#00150fee;display:flex;align-items:center;justify-content:center;padding:14px}
+.dialog{
+ width:min(100%,440px);max-height:90vh;overflow:auto;
+ background:linear-gradient(145deg,#15533a,#08291d);
+ border:2px solid var(--gold);border-radius:20px;padding:19px 14px;
+ box-shadow:0 0 35px #0009
+}
+.dialog h2{color:var(--gold);margin:3px 0 7px}
+#recapScore{font-size:17px;font-weight:bold;margin:8px}
+.recaprow{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:8px;padding:9px 7px;border-bottom:1px solid #ffffff20;font-size:13px}
+.recaprow strong{color:#ffe4a0;white-space:nowrap}
+#resultTitle{font-size:18px;color:#ffe5a1;font-weight:bold;margin:12px 0}
+#confetti{position:fixed;inset:0;z-index:8;pointer-events:none;overflow:hidden}
+.confetto{position:absolute;top:-15px;width:8px;height:13px;animation:fall 2.5s linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(780deg);opacity:.1}}
+#scopaBanner{
+ position:fixed;z-index:9;left:0;right:0;top:37%;
+ font-size:clamp(42px,12vw,72px);font-weight:1000;color:#ffe68c;
+ text-shadow:0 0 10px #f80,0 4px 0 #79420d,0 0 30px #ffd34d;
+ pointer-events:none;animation:pop 1.25s ease forwards
+}
+@keyframes pop{
+ 0%{opacity:0;transform:scale(.2) rotate(-10deg)}
+ 25%{opacity:1;transform:scale(1.2) rotate(4deg)}
+ 65%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.1) translateY(-45px)}
+}
+
+/* Layout compatto: tutta la stanza visibile sul telefono senza scorrere la pagina */
+html, body { width:100%; height:100%; }
+body {
+  min-height:0;
+  height:100vh;
+  height:100dvh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
 }
 header {
- padding:1px 4px; background:linear-gradient(135deg,#062b1e,#134e32,#062b1e);
- border:1px solid var(--gold); border-radius:5px; flex-shrink:0;
+  flex:0 0 auto;
+  padding:5px 6px 6px;
+  box-shadow:0 2px 8px #0006;
 }
-.brand{font-size:6px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
-h1{margin:0;color:var(--gold);font-size:10px;letter-spacing:1px}
-
+.brand { font-size:9px; letter-spacing:2px; }
+h1 { margin:1px 0; font-size:clamp(18px,5vw,25px); letter-spacing:2px; }
+header > div[style*="color:#f9e5b1"] { font-size:10px; line-height:1.1; }
+#score { font-size:13px; margin-top:3px; }
+.scoreline { height:4px; margin:3px auto 0; }
+header > div[style*="font-size:11px"] { font-size:9px !important; margin-top:2px !important; }
 main {
- flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:1px;
- max-width:480px; margin:0 auto; width:100%; padding:1px 0; min-height:0;
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  max-width:760px;
+  padding:3px 5px;
+  display:grid;
+  grid-template-rows:auto auto minmax(95px,1fr) auto auto;
+  gap:4px;
+  overflow:hidden;
 }
 .panel {
- margin:0; padding:1px 3px; border:1px solid #f5d58b55; border-radius:5px;
- background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(0,0,0,0.2));
- display:flex; flex-direction:column; justify-content:center; align-items:center; transition:all 0.3s ease;
+  min-height:0;
+  margin:0;
+  padding:4px 5px;
+  border-radius:10px;
+  box-shadow:0 3px 8px #0004;
 }
-.panel.active-turn { border: 2px solid #ffdf76; box-shadow: 0 0 8px #ffdf76; background: rgba(255, 223, 118, 0.1); }
-
-.label{font-size:7px;letter-spacing:1px;color:var(--gold);font-weight:bold;margin-bottom:1px;text-transform:uppercase}
-
-.area {
- display:flex; justify-content:center; align-items:center; gap:4px;
- flex-wrap:nowrap; min-height:56px; width:100%; padding:1px;
-}
-
-#table {
- background:radial-gradient(ellipse,#18633e,#083824);
- border:1px double var(--gold);
- min-height:82px;
- position:relative;
- display:flex;
- flex-direction:column;
- justify-content:center;
- align-items:center;
- gap:2px;
-}
-
-.table-row {
- display: flex;
- justify-content: center;
- align-items: center;
- gap: 4px;
- width: 100%;
-}
-
-#remaining { position:absolute; top:2px; right:4px; padding:1px 3px; border:1px solid var(--gold); border-radius:3px; background:#042116; color:#ffe7a7; font-size:7px; font-weight:bold; z-index:5; }
-
+.label { font-size:9px; letter-spacing:1px; margin:1px 0 3px; }
+.area { min-height:0; gap:3px; padding:2px; }
+.note, footer { display:none !important; }
+#opponent { min-height:34px; }
+#table { display:flex; flex-direction:column; justify-content:center; }
+#remaining { font-size:10px; padding:4px 8px; margin:0 auto 3px; }
+#middle { flex:1; align-content:center; }
 .card {
- width:clamp(46px, 14vw, 56px); height:auto; aspect-ratio:1324/2188; object-fit:contain;
- background:#fff8e9; border:2px solid #e6d5a7; border-radius:5px; cursor:pointer; transition:transform .15s; box-shadow:0 2px 4px rgba(0,0,0,0.3);
+  width:clamp(34px,10vw,56px);
+  max-height:82px;
+  border-width:1px;
+  border-radius:4px;
 }
-.card.selected{transform:translateY(-4px);outline:3px solid #ffe17c;box-shadow:0 0 8px #ffdf76}
-.back {
- width:clamp(40px, 12vw, 48px); height:auto; aspect-ratio:1324/2188;
- background:repeating-linear-gradient(45deg,#8b2530,#8b2530 4px,#f2d8a4 5px,#8b2530 8px);
- border:2px double #f2d8a4; border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
+.card.selected { transform:translateY(-3px); outline-width:2px; }
+.back { width:clamp(34px,10vw,56px); height:clamp(48px,14vw,76px); }
+#player { min-height:42px; }
+#play { padding:6px 10px; margin:2px; font-size:11px; border-radius:7px; }
+#message { font-size:10px; line-height:1.1; }
+#chat { padding:4px 5px; }
+#chatlog { height:32px; padding:4px 6px; font-size:10px; line-height:1.2; }
+.chatrow { gap:4px; margin-top:3px; }
+#chatInput { padding:6px; font-size:12px; }
+#chat button { padding:6px 9px; margin:0; font-size:11px; }
+#modal .dialog { max-height:88dvh; }
+/* Schermi molto bassi: riduce ulteriormente gli spazi, senza ridimensionare le carte originali nei file */
+@media (max-height:700px) {
+  header { padding:3px 5px; }
+  main { gap:3px; padding:3px; grid-template-rows:auto auto minmax(75px,1fr) auto auto; }
+  .panel { padding:3px; }
+  #opponent { min-height:27px; }
+  #chatlog { height:25px; }
+  #remaining { margin-bottom:1px; }
+  .card { width:clamp(30px,8.5vw,48px); max-height:68px; }
+  .back { width:clamp(30px,8.5vw,48px); height:60px; }
+}
+@media (max-height:570px) {
+  header > div[style*="color:#f9e5b1"] { display:none; }
+  header > div[style*="font-size:11px"] { display:none; }
+  main { grid-template-rows:auto auto minmax(65px,1fr) auto auto; }
+  #chatlog { height:20px; }
 }
 
-.action-row { display:flex; align-items:center; gap:6px; width:100%; justify-content:center; margin-top:1px; }
-button { border:1px solid #ffe3a0; border-radius:4px; padding:2px 14px; background:linear-gradient(135deg,#ffe6a0,#bd8e35); color:#122a1b; font-weight:bold; font-size:8px; cursor:pointer; }
-button:disabled{opacity:0.4;cursor:not-allowed}
-
-#chat { padding:1px 3px; flex-shrink:0; margin-bottom:1px; }
-#chatlog { height:20px; overflow-y:auto; background:rgba(2, 24, 15, 0.9); border:1px solid #f5d58b33; border-radius:4px; padding:1px 4px; font-size:7px; width:100%; text-align:left; margin-bottom:1px; }
-.chatrow {display:flex; gap:3px; width:100%}
-#chatInput { flex:1; border-radius:3px; padding:2px 4px; border:1px solid var(--gold); font-size:8px; background:#fff; color:#000; height:18px; }
-
-#partyOverlay, #winOverlay, #lobbyOverlay {
- position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92);
- display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; color:var(--gold); padding:20px;
-}
-#partyOverlay h2, #winOverlay h2, #lobbyOverlay h2 { font-size: 20px; margin: 0; text-shadow: 0 0 10px #ffdf76; }
-.win-box { background: rgba(6, 62, 43, 0.98); border: 2px solid var(--gold); border-radius: 8px; padding: 15px; width: 85%; max-width: 320px; box-shadow: 0 0 15px var(--gold); }
 </style>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
-<div id="partyOverlay">
- <h2>🎉 SCOPA! 🎉</h2>
- <p style="font-size:12px; color:#fff;">Grande mossa!</p>
-</div>
-
-<div id="lobbyOverlay">
- <div class="win-box">
-  <h2>🎮 LOBBY PARTITA</h2>
-  <p style="font-size:9px; color:#fff; margin:8px 0;" id="lobbyDesc">Verifica partecipanti in corso...</p>
-  <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
-   <div id="slot1Info" style="padding:6px; background:rgba(255,255,255,0.08); border-radius:4px; font-size:8px; border:1px solid var(--gold);">G1: In attesa...</div>
-   <div id="slot2Info" style="padding:6px; background:rgba(255,255,255,0.08); border-radius:4px; font-size:8px; border:1px solid var(--gold);">G2: In attesa...</div>
-  </div>
-  <button id="enterBtn" onclick="autoJoinRoom()" style="padding:8px; margin-top:12px; width:100%; display:none;">Entra in Partita</button>
-  <p id="lobbyStatus" style="font-size:8px; color:#a3f7bf; margin-top:8px;"></p>
- </div>
-</div>
-
-<div id="winOverlay">
- <div class="win-box">
-  <h2>🏆 VINCITORE FINALE 🏆</h2>
-  <h3 id="winnerText" style="color:#fff; margin:10px 0;"></h3>
-  <div id="finalScore" style="font-size:12px; color:var(--gold); margin-bottom:15px;"></div>
-  <p style="font-size:8px; color:#a3f7bf;">La partita si è conclusa!</p>
- </div>
-</div>
-
 <header>
- <div class="brand">Dany presenta</div>
- <h1>Scopa di Monopolygoita</h1>
+ <div class="brand">MONOPOLYGOITA PRESENTA</div>
+ <h1>♠ SCOPA ♣</h1>
+ <div style="color:#f9e5b1">Carte napoletane</div>
+ <div id="score">In attesa dei giocatori…</div>
+ <div class="scoreline"><div id="progress"></div></div>
+ <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
 </header>
 
 <main>
- <section class="panel" id="opponentPanel">
-  <div id="opponentLabel" class="label">AVVERSARIO</div>
+
+ <section class="panel">
+  <div class="label" id="opponentLabel">AVVERSARIO</div>
   <div id="opponent" class="area"></div>
  </section>
 
  <section class="panel" id="table">
-  <div id="remaining">🂠 --</div>
-  <div class="label" style="margin-bottom:0;">✦ TAVOLO DA GIOCO ✦</div>
-  <div id="tableRowsContainer" style="width:100%; display:flex; flex-direction:column; gap:2px;"></div>
+  <div class="label">✦ TAVOLO DA GIOCO ✦</div>
+  <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
+  <div id="middle" class="area"></div>
  </section>
 
- <section class="panel" id="playerPanel">
-  <div id="myRoleLabel" class="label">LE TUE CARTE</div>
+ <section class="panel">
+  <div class="label" id="playerLabel">LE TUE CARTE</div>
   <div id="player" class="area"></div>
-  <div class="action-row">
-   <button id="play" onclick="playPlayerCard()" disabled>Gioca carta</button>
-   <button onclick="initRoom()" style="background:linear-gradient(135deg,#73a985,#22543d); color:#fff; border-color:#93c5ae;">Aggiorna Stato</button>
-  </div>
+  <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
  </section>
+
+ <div id="message" aria-live="polite"></div>
 
  <section class="panel" id="chat">
-  <div class="label">💬 CHAT DELLA STANZA</div>
-  <div id="chatlog" aria-live="polite">Connesso alla chat globale.</div>
+  <div class="label">💬 CHAT DEL TAVOLO</div>
+  <div id="chatlog" aria-live="polite">Benvenuto al tavolo! Buona partita.</div>
   <div class="chatrow">
-   <input id="chatInput" maxlength="180" placeholder="Scrivi messaggio o tifo…">
-   <button onclick="sendChat()" style="padding:1px 4px; font-size:7px; height:18px; line-height:16px;">Invia</button>
+   <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
+   <button onclick="sendChat()">Invia</button>
   </div>
+  <div class="note">Chat condivisa tra i due giocatori.</div>
  </section>
 </main>
 
 <footer>Scopa Napoletana · Monopolygoita</footer>
+<div id="confetti"></div>
+<div id="scopaBanner" class="hidden">SCOPA!</div>
 
+<div id="modal" class="hidden">
+ <div class="dialog">
+  <div class="brand">MONOPOLYGOITA</div>
+  <h2 id="modalTitle">Riepilogo della mano</h2>
+  <div id="resultTitle"></div>
+  <div id="recapScore"></div>
+  <div id="recapRows"></div>
+  <button id="continueButton" onclick="continueGame()">Continua</button>
+ </div>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-const tg = window.Telegram?.WebApp || {};
-try { if (tg.expand) tg.expand(); } catch(e){}
-
-const tgUser = tg.initDataUnsafe?.user;
-let userName = tgUser ? (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : null;
-
-if (!userName) {
-  userName = localStorage.getItem('scopa_guest_name');
-  if (!userName) {
-    userName = 'Ospite_' + Math.floor(Math.random() * 900 + 100);
-    localStorage.setItem('scopa_guest_name', userName);
-  }
-}
-
-const ROOM_ID = 'stanza_principale';
-const SUPABASE_URL = 'https://sommziqnmxgkwyjatxcn.supabase.co';
-const SUPABASE_KEY = 'Sb_publishable_qkiuSaslucRFunQhtFc48Q_cY8_um9C';
-
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-let gameState = null;
-let selectedCardId = null;
-
-const files = [
-  "01 Asso di denari.jpg","02 Due di denari.jpg","03 Tre di denari.jpg","04 Quattro di denari.jpg","05 Cinque di denari.jpg","06 Sei di denari.jpg","07 Sette di denari.jpg","08 Otto di denari.jpg","09 Nove di denari.jpg","10 Dieci di denari.jpg",
-  "11 Asso di coppe.jpg","12 Due di coppe.jpg","13 Tre di coppe.jpg","14 Quattro di coppe.jpg","15 Cinque di coppe.jpg","16 Sei di coppe.jpg","17 Sette di coppe.jpg","18 Otto di coppe.jpg","19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
-  "21 Asso di spade.jpg","22 Due di spade.jpg","23 Tre di spade.jpg","24 Quattro di spade.jpg","25 Cinque di spade.jpg","26 Sei di spade.jpg","27 Sette di spade.jpg","28 Otto di spade.jpg","29 Nove di spade.jpg","30 Dieci di spade.jpg",
-  "31 Asso di bastoni.jpg","32 Due di bastoni.jpg","33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg","35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg","37 Sette di bastoni.jpg","38 Otto di bastoni.jpg","39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
+const suits=["denari","coppe","spade","bastoni"];
+const files=[
+"01 Asso di denari.jpg","02 Due di denari.jpg",
+"03 Tre di denari.jpg","04 Quattro di denari.jpg",
+"05 Cinque di denari.jpg","06 Sei di denari.jpg",
+"07 Sette di denari.jpg","08 Otto di denari.jpg",
+"09 Nove di denari.jpg","10 Dieci di denari.jpg",
+"11 Asso di coppe.jpg","12 Due di coppe.jpg",
+"13 Tre di coppe.jpg","14 Quattro di coppe.jpg",
+"15 Cinque di coppe.jpg","16 Sei di coppe.jpg",
+"17 Sette di coppe.jpg","18 Otto di coppe.jpg",
+"19 Nove di coppe.jpg","20 Dieci di coppe.jpg",
+"21 Asso di spade.jpg","22 Due di spade.jpg",
+"23 Tre di spade.jpg","24 Quattro di spade.jpg",
+"25 Cinque di spade.jpg","26 Sei di spade.jpg",
+"27 Sette di spade.jpg","28 Otto di spade.jpg",
+"29 Nove di spade.jpg","30 Dieci di spade.jpg",
+"31 Asso di bastoni.jpg","32 Due di bastoni.jpg",
+"33 Tre di bastoni.jpg","34 Quattro di bastoni.jpg",
+"35 Cinque di bastoni.jpg","36 Sei di bastoni.jpg",
+"37 Sette di bastoni.jpg","38 Otto di bastoni.jpg",
+"39 Nove di bastoni.jpg","40 Dieci di Bastoni.jpg"
 ];
 
+let deck=[],hand=[],cpu=[],table=[],mine=[],theirs=[];
+let selected=null,turn="player",lastTaker=null,finished=false;
+let playerScore=0,cpuScore=0,playerScopes=0,cpuScopes=0;
+let lastRecap=null;
+
 function makeDeck(){
- const d = files.map((file, i) => ({ id: i+1, rank: (i % 10) + 1, file }));
- for(let i = d.length - 1; i > 0; i--){
-  const j = Math.floor(Math.random() * (i + 1));
-  [d[i], d[j]] = [d[j], d[i]];
+ const d=files.map((file,i)=>({
+  id:i+1,rank:i%10+1,suit:suits[Math.floor(i/10)],
+  file,value:i%10+1
+ }));
+ for(let i=d.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [d[i],d[j]]=[d[j],d[i]];
  }
  return d;
 }
 
 function imageURL(c){
- if (!c || !c.file) return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent("01 Asso di denari.jpg");
- let fname = c.file;
- if(fname.toLowerCase().includes("dieci di bastoni")) {
-   fname = "40 Dieci di Bastoni.jpg";
+ return "https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(c.file);
+}
+
+function cardImage(c,area){
+ const im=document.createElement("img");
+ im.className="card"+(area==="player"&&selected===c.id?" selected":"");
+ im.src=imageURL(c);
+ im.alt=c.file;
+ im.loading="lazy";
+ im.onerror=()=>{im.style.background="#f2dfb0";};
+ if(area==="player"&&turn==="player"&&!finished){
+  im.onclick=()=>{selected=c.id;render();};
  }
- return "https://commons.wikimedia.org/w/index.php?title=Special:FilePath&file=" + encodeURIComponent(fname);
+ return im;
 }
 
-async function initRoom() {
-  const { data, error } = await supabaseClient
-    .from('scopa_rooms')
-    .select('*')
-    .eq('room_id', ROOM_ID)
-    .single();
+function render(){
+ const p=document.getElementById("player");
+ const m=document.getElementById("middle");
+ const o=document.getElementById("opponent");
+ p.replaceChildren();
+ m.replaceChildren();
+ o.replaceChildren();
 
-  if (error || !data || !data.board_cards || data.board_cards.length === 0) {
-    const deck = makeDeck();
-    const newGame = {
-      room_id: ROOM_ID,
-      board_cards: [deck.pop(), deck.pop(), deck.pop(), deck.pop()],
-      player1_id: null,
-      player2_id: null,
-      player1_hand: [deck.pop(), deck.pop(), deck.pop()],
-      player2_hand: [deck.pop(), deck.pop(), deck.pop()],
-      player1_score: 0,
-      player2_score: 0,
-      player1_captured: [],
-      player2_captured: [],
-      player1_scope: 0,
-      player2_scope: 0,
-      turn: 'player1',
-      deck: deck,
-      chat: []
-    };
-    await supabaseClient.from('scopa_rooms').upsert(newGame);
-    gameState = newGame;
-  } else {
-    gameState = data;
-    
-    let needsSync = false;
-    if (!gameState.board_cards || gameState.board_cards.length === 0) {
-      const deck = gameState.deck && gameState.deck.length >= 4 ? gameState.deck : makeDeck();
-      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      gameState.deck = deck;
-      needsSync = true;
-    }
-    if (!gameState.player1_hand || gameState.player1_hand.length === 0) {
-      const deck = gameState.deck && gameState.deck.length >= 3 ? gameState.deck : makeDeck();
-      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-      gameState.deck = deck;
-      needsSync = true;
-    }
-    if (!gameState.player2_hand || gameState.player2_hand.length === 0) {
-      const deck = gameState.deck && gameState.deck.length >= 3 ? gameState.deck : makeDeck();
-      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-      gameState.deck = deck;
-      needsSync = true;
-    }
+ hand.forEach(c=>p.appendChild(cardImage(c,"player")));
+ table.forEach(c=>m.appendChild(cardImage(c,"table")));
+ cpu.forEach(()=>{
+  const b=document.createElement("div");
+  b.className="card back";
+  o.appendChild(b);
+ });
 
-    if (!gameState.player1_captured) gameState.player1_captured = [];
-    if (!gameState.player2_captured) gameState.player2_captured = [];
-    if (!gameState.player1_scope) gameState.player1_scope = 0;
-    if (!gameState.player2_scope) gameState.player2_scope = 0;
-    if (!gameState.chat) gameState.chat = [];
+ document.getElementById("score").textContent="Giocatore 1 "+playerScore+" — Giocatore 2 "+cpuScore;
+ document.getElementById("progress").style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+"%";
+ document.getElementById("remaining").textContent="🂠 CARTE NEL MAZZO: "+deck.length;
+ document.getElementById("play").disabled=turn!=="player"||finished||selected===null;
+}
 
-    if (needsSync) {
-      await updateRemoteState();
-    }
+function say(t){
+ const el=document.getElementById("message");
+ if(t.includes("scegli una carta")||
+    t.includes("Tocca una tua carta")||
+    t.includes("Nuove carte distribuite")||
+    t.includes("Nuova mano!")){
+  el.textContent="";
+  return;
+ }
+ el.textContent=t;
+}
+
+function startHand(){
+ deck=makeDeck();
+ hand=[];cpu=[];table=[];mine=[];theirs=[];
+ selected=null;lastTaker=null;finished=false;turn="player";
+ playerScopes=0;cpuScopes=0;
+ document.getElementById("modal").classList.add("hidden");
+ for(let i=0;i<4;i++)table.push(deck.pop());
+ deal();
+ say("Nuova mano!");
+}
+
+function newGame(){
+ playerScore=0;cpuScore=0;
+ startHand();
+}
+
+function deal(){
+ while(hand.length<3&&deck.length)hand.push(deck.pop());
+ while(cpu.length<3&&deck.length)cpu.push(deck.pop());
+ selected=null;turn="player";
+ render();
+}
+
+function combos(cards,target){
+ const out=[];
+ for(let mask=1;mask<(1<<cards.length);mask++){
+  const group=cards.filter((c,i)=>mask&(1<<i));
+  if(group.reduce((s,c)=>s+c.value,0)===target)out.push(group);
+ }
+ return out;
+}
+
+function celebrate(){
+ const banner=document.getElementById("scopaBanner");
+ banner.classList.remove("hidden");
+ banner.style.animation="none";
+ void banner.offsetWidth;
+ banner.style.animation="";
+
+ const holder=document.getElementById("confetti");
+ holder.replaceChildren();
+
+ for(let i=0;i<75;i++){
+  const bit=document.createElement("i");
+  bit.className="confetto";
+  bit.style.left=Math.random()*100+"%";
+  bit.style.background=["#ffe27a","#fff5d6","#e5b34c","#55cf8d","#ed6b68"][i%5];
+  bit.style.animationDelay=Math.random()*.8+"s";
+  bit.style.animationDuration=(1.5+Math.random()*1.5)+"s";
+  holder.appendChild(bit);
+ }
+
+ setTimeout(()=>{
+  banner.classList.add("hidden");
+  holder.replaceChildren();
+ },3000);
+}
+
+function takeCard(card,who){
+ const exact=table.find(c=>c.value===card.value);
+ let chosen=[];
+
+ if(exact){
+  chosen=[exact];
+ }else{
+  const options=combos(table,card.value);
+  if(options.length){
+   chosen=options.find(g=>g.length===1)||options[0];
   }
-  
-  checkLobby();
+ }
+
+ if(chosen.length){
+  const captured=who==="player"?mine:theirs;
+  captured.push(card,...chosen);
+  table=table.filter(c=>!chosen.some(x=>x.id===c.id));
+  lastTaker=who;
+
+  const cardsStillToPlay=hand.length+cpu.length;
+  const canStillPlay=deck.length>0||cardsStillToPlay>1;
+
+  if(table.length===0&&canStillPlay){
+   if(who==="player"){
+    playerScopes++;
+   }else{
+    cpuScopes++;
+   }
+   celebrate();
+   say(who==="player"?"SCOPA! Hai preso tutte le carte!":"Il computer ha fatto SCOPA!");
+  }else{
+   say(who==="player"?"Hai preso le carte.":"Il computer ha preso le carte.");
+  }
+ }else{
+  table.push(card);
+  say(who==="player"?"Carta calata sul tavolo.":"Il computer ha calato una carta.");
+ }
+ return true;
+}
+
+function playPlayer(){
+ if(turn!=="player"||finished||selected===null)return;
+ const card=hand.find(c=>c.id===selected);
+ if(!card)return;
+ if(!takeCard(card,"player"))return;
+
+ hand=hand.filter(c=>c.id!==card.id);
+ selected=null;
+ render();
+
+ if(hand.length===0&&cpu.length===0){
+  afterTurn();
+  return;
+ }
+ turn="cpu";
+ render();
+ setTimeout(cpuMove,600);
+}
+
+function cpuMove(){
+ if(finished)return;
+ if(!cpu.length){
+  afterTurn();
+  return;
+ }
+ const card=cpu[0];
+ if(!takeCard(card,"cpu"))return;
+ cpu=cpu.slice(1);
+ render();
+ afterTurn();
+}
+
+function afterTurn(){
+ if(!hand.length&&!cpu.length){
+  if(deck.length){
+   deal();
+   say("Nuove carte distribuite. Tocca a te.");
+  }else{
+   finishHand();
+  }
+ }else{
+  turn="player";
   render();
-  subscribeRealtime();
+  say("Tocca a te: scegli una carta e premi Gioca carta.");
+ }
 }
 
-function checkLobby() {
-  const lobby = document.getElementById("lobbyOverlay");
-  const slot1 = document.getElementById("slot1Info");
-  const slot2 = document.getElementById("slot2Info");
-  const enterBtn = document.getElementById("enterBtn");
-  const lobbyDesc = document.getElementById("lobbyDesc");
-
-  slot1.textContent = "G1: " + (gameState.player1_id ? gameState.player1_id : "Libero (In attesa...)");
-  slot2.textContent = "G2: " + (gameState.player2_id ? gameState.player2_id : "Libero (In attesa...)");
-
-  if (userName === gameState.player1_id || userName === gameState.player2_id) {
-    lobby.style.display = "none";
-    return;
-  }
-
-  lobby.style.display = "flex";
-
-  if (!gameState.player1_id || !gameState.player2_id) {
-    lobbyDesc.textContent = "Stato partecipanti nella stanza:";
-    enterBtn.style.display = "block";
-    enterBtn.textContent = "Entra in partita come " + (!gameState.player1_id ? "Giocatore 1" : "Giocatore 2");
-  } else {
-    lobbyDesc.textContent = "La stanza è al completo!";
-    enterBtn.style.display = "none";
-  }
+function primieraValue(c){
+ if(c.rank===7)return 21;
+ if(c.rank===6)return 18;
+ if(c.rank===1)return 16;
+ if(c.rank===5)return 15;
+ if(c.rank===4)return 14;
+ if(c.rank===3)return 13;
+ if(c.rank===2)return 12;
+ return 10;
 }
 
-async function autoJoinRoom() {
-  if (!gameState.player1_id) {
-    gameState.player1_id = userName;
-  } else if (!gameState.player2_id && gameState.player1_id !== userName) {
-    gameState.player2_id = userName;
-  } else {
-    checkLobby();
-    return;
-  }
-  await updateRemoteState();
-  checkLobby();
-  render();
+function primiera(cards){
+ const best={denari:0,coppe:0,spade:0,bastoni:0};
+ for(const c of cards){
+  best[c.suit]=Math.max(best[c.suit],primieraValue(c));
+ }
+ if(Object.values(best).some(v=>v===0))return 0;
+ return Object.values(best).reduce((a,b)=>a+b,0);
 }
 
-function subscribeRealtime() {
-  supabaseClient
-    .channel('room_channel_v12')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'scopa_rooms', filter: `room_id=eq.${ROOM_ID}` }, payload => {
-      if(payload.new && payload.new.board_cards && payload.new.board_cards.length > 0) {
-        gameState = payload.new;
-        checkLobby();
-        render();
-      }
-    })
-    .subscribe();
+function countCoins(cards){
+ return cards.filter(c=>c.suit==="denari").length;
 }
 
-async function updateRemoteState() {
-  await supabaseClient.from('scopa_rooms').upsert(gameState);
+function hasSettebello(cards){
+ return cards.some(c=>c.suit==="denari"&&c.rank===7);
 }
 
-function findCapture(card, board) {
-  for (let i = 0; i < board.length; i++) {
-    if (board[i].rank === card.rank) {
-      return [i];
-    }
-  }
-  function searchSum(target, currentSum, startIndex, currentIndices) {
-    if (currentSum === target) return currentIndices;
-    if (currentSum > target || startIndex >= board.length) return null;
-    
-    for (let i = startIndex; i < board.length; i++) {
-      const res = searchSum(target, currentSum + board[i].rank, i + 1, [...currentIndices, i]);
-      if (res) return res;
-    }
-    return null;
-  }
-  return searchSum(card.rank, 0, 0, []);
+function handBreakdown(cards,opponent,scopes){
+ const rows=[];
+ rows.push({
+  name:"Maggior numero di carte",
+  point:cards.length>opponent.length?1:0,
+  detail:cards.length+" carte contro "+opponent.length
+ });
+ rows.push({
+  name:"Maggior numero di denari",
+  point:countCoins(cards)>countCoins(opponent)?1:0,
+  detail:countCoins(cards)+" denari contro "+countCoins(opponent)
+ });
+ rows.push({
+  name:"Settebello",
+  point:hasSettebello(cards)?1:0,
+  detail:hasSettebello(cards)?"Sette di denari conquistato":"Non conquistato"
+ });
+
+ const a=primiera(cards),b=primiera(opponent);
+ rows.push({
+  name:"Primiera",
+  point:a>b&&a>0?1:0,
+  detail:a>b&&a>0?"Primiera "+a+" contro "+b:
+         a===b?"Parità ("+a+" a "+b+")":"Primiera "+a+" contro "+b
+ });
+ rows.push({
+  name:"Scope",
+  point:scopes,
+  detail:scopes+" scope realizzate"
+ });
+ return rows;
 }
 
-function calculateHandPoints() {
-  let p1Cards = gameState.player1_captured || [];
-  let p2Cards = gameState.player2_captured || [];
+function finishHand(){
+ if(lastTaker==="player")mine.push(...table);
+ else if(lastTaker==="cpu")theirs.push(...table);
+ table=[];
 
-  let p1Pts = gameState.player1_scope || 0;
-  let p2Pts = gameState.player2_scope || 0;
+ const pRows=handBreakdown(mine,theirs,playerScopes);
+ const cRows=handBreakdown(theirs,mine,cpuScopes);
+ const p=pRows.reduce((s,r)=>s+r.point,0);
+ const c=cRows.reduce((s,r)=>s+r.point,0);
 
-  if (p1Cards.length > p2Cards.length) p1Pts += 1;
-  else if (p2Cards.length > p1Cards.length) p2Pts += 1;
+ playerScore+=p;
+ cpuScore+=c;
+ finished=true;
+ render();
 
-  let p1Denari = p1Cards.filter(c => c.file.includes('denari')).length;
-  let p2Denari = p2Cards.filter(c => c.file.includes('denari')).length;
-  if (p1Denari > p2Denari) p1Pts += 1;
-  else if (p2Denari > p1Denari) p2Pts += 1;
+ const gameOver=playerScore>=11||cpuScore>=11;
+ const title=gameOver?
+  (playerScore===cpuScore?"Parità!":playerScore>cpuScore?"🏆 Hai vinto la partita!":"Il computer ha vinto la partita"):
+  "Mano terminata!";
 
-  let p1Has7Bello = p1Cards.some(c => c.file === '07 Sette di denari.jpg');
-  let p2Has7Bello = p2Cards.some(c => c.file === '07 Sette di denari.jpg');
-  if (p1Has7Bello) p1Pts += 1;
-  if (p2Has7Bello) p2Pts += 1;
-
-  const primieraValues = {7:21, 6:18, 1:16, 5:15, 4:14, 3:13, 2:12, 10:10, 9:10, 8:10};
-  function getBestPerSuit(cards) {
-    let suits = { denari: 0, coppe: 0, spade: 0, bastoni: 0 };
-    let found = { denari: false, coppe: false, spade: false, bastoni: false };
-    cards.forEach(c => {
-      let suit = c.file.includes('denari') ? 'denari' : c.file.includes('coppe') ? 'coppe' : c.file.includes('spade') ? 'spade' : 'bastoni';
-      let val = primieraValues[c.rank] || 0;
-      if (val > suits[suit]) {
-        suits[suit] = val;
-        found[suit] = true;
-      }
-    });
-    if (!found.denari || !found.coppe || !found.spade || !found.bastoni) return 0;
-    return suits.denari + suits.coppe + suits.spade + suits.bastoni;
-  }
-  let p1Primiera = getBestPerSuit(p1Cards);
-  let p2Primiera = getBestPerSuit(p2Cards);
-  if (p1Primiera > p2Primiera) p1Pts += 1;
-  else if (p2Primiera > p1Primiera) p2Pts += 1;
-
-  gameState.player1_score += p1Pts;
-  gameState.player2_score += p2Pts;
+ showRecap(pRows,cRows,p,c,title,gameOver);
 }
 
-function render() {
-  if (!gameState) return;
-  const pArea = document.getElementById("player");
-  const tContainer = document.getElementById("tableRowsContainer");
-  const oArea = document.getElementById("opponent");
-  const pPanel = document.getElementById("playerPanel");
-  const oPanel = document.getElementById("opponentPanel");
+function showRecap(pRows,cRows,p,c,title,gameOver){
+ lastRecap={pRows,cRows,p,c,gameOver};
+ document.getElementById("modalTitle").textContent=gameOver?"Fine partita":"Riepilogo della mano";
+ document.getElementById("resultTitle").textContent=title;
+ document.getElementById("recapScore").textContent="Giocatore 1 "+playerScore+" — Giocatore 2 "+cpuScore;
 
-  pArea.replaceChildren();
-  tContainer.replaceChildren();
-  oArea.replaceChildren();
+ const box=document.getElementById("recapRows");
+ box.replaceChildren();
 
-  let myRole = 'none';
-  if (userName === gameState.player2_id) myRole = 'player2';
-  else if (userName === gameState.player1_id) myRole = 'player1';
+ const heading=document.createElement("div");
+ heading.className="recaprow";
+ heading.innerHTML="<strong>Categoria</strong><strong>Giocatore 1 / 2</strong>";
+ box.appendChild(heading);
 
-  const isMyTurn = gameState.turn === myRole;
+ for(let i=0;i<pRows.length;i++){
+  const a=pRows[i],b=cRows[i];
+  const row=document.createElement("div");
+  row.className="recaprow";
 
-  const p1Name = gameState.player1_id || 'In attesa...';
-  const p2Name = gameState.player2_id || 'In attesa...';
+  const name=document.createElement("span");
+  name.textContent=a.name;
 
-  const activePlayerName = myRole === 'player2' ? p2Name : p1Name;
-  const activePlayerScore = myRole === 'player2' ? gameState.player2_score : gameState.player1_score;
+  const points=document.createElement("strong");
+  points.textContent=a.point+" / "+b.point;
 
-  const opponentPlayerName = myRole === 'player2' ? p1Name : p2Name;
-  const opponentPlayerScore = myRole === 'player2' ? gameState.player1_score : gameState.player2_score;
+  const detail=document.createElement("div");
+  detail.style.cssText="font-size:11px;color:#d9cba9;text-align:left;margin-top:3px;width:100%";
+  detail.textContent="Giocatore 1: "+a.detail+" · Giocatore 2: "+b.detail;
 
-  document.getElementById("opponentLabel").textContent = `AVVERSARIO: ${opponentPlayerName} (${opponentPlayerScore} pt)`;
+  const wrap=document.createElement("div");
+  wrap.style.width="100%";
+  wrap.append(name,detail);
+  row.replaceChildren(wrap,points);
+  box.appendChild(row);
+ }
 
-  if (isMyTurn && myRole !== 'none') {
-    pPanel.classList.add('active-turn');
-    oPanel.classList.remove('active-turn');
-    document.getElementById("myRoleLabel").textContent = `LE TUE CARTE: ${activePlayerName} (${activePlayerScore} pt) - È IL TUO TURNO!`;
-  } else {
-    pPanel.classList.remove('active-turn');
-    oPanel.classList.add('active-turn');
-    document.getElementById("myRoleLabel").textContent = `LE TUE CARTE: ${activePlayerName} (${activePlayerScore} pt)` + (myRole === 'none' ? " - IN ATTESA DI INGRESSO" : " - ATTENDI IL TURNO");
-  }
+ const total=document.createElement("div");
+ total.className="recaprow";
+ total.innerHTML="<strong>Punti della mano</strong><strong>"+p+" / "+c+"</strong>";
+ box.appendChild(total);
 
-  if (gameState.board_cards && gameState.board_cards.length > 0) {
-    const row1 = gameState.board_cards.slice(0, 5);
-    const row2 = gameState.board_cards.slice(5);
-
-    const r1 = document.createElement("div");
-    r1.className = "table-row";
-    row1.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card";
-      im.src = imageURL(c);
-      r1.appendChild(im);
-    });
-    tContainer.appendChild(r1);
-
-    if (row2.length > 0) {
-      const r2 = document.createElement("div");
-      r2.className = "table-row";
-      row2.forEach(c => {
-        const im = document.createElement("img");
-        im.className = "card";
-        im.src = imageURL(c);
-        r2.appendChild(im);
-      });
-      tContainer.appendChild(r2);
-    }
-  }
-
-  const myHand = myRole === 'player2' ? gameState.player2_hand : (myRole === 'player1' ? gameState.player1_hand : null);
-  if (myHand && myHand.length > 0 && myRole !== 'none') {
-    myHand.forEach(c => {
-      const im = document.createElement("img");
-      im.className = "card" + (selectedCardId === c.id ? " selected" : "");
-      im.src = imageURL(c);
-      if(isMyTurn) {
-        im.onclick = () => { selectedCardId = c.id; render(); };
-      }
-      pArea.appendChild(im);
-    });
-  } else {
-    const info = document.createElement("div");
-    info.style.fontSize = "8px";
-    info.style.color = "#ffe7a7";
-    info.textContent = myRole === 'none' ? "Usa il menu della lobby per entrare." : "Caricamento carte in corso...";
-    pArea.appendChild(info);
-  }
-
-  const oppHand = myRole === 'player2' ? gameState.player1_hand : gameState.player2_hand;
-  if (oppHand && oppHand.length > 0) {
-    oppHand.forEach(() => {
-      const b = document.createElement("div");
-      b.className = "card back";
-      oArea.appendChild(b);
-    });
-  }
-
-  if (gameState.deck) {
-    document.getElementById("remaining").textContent = "🂠 " + gameState.deck.length;
-  }
-
-  document.getElementById("play").disabled = (myRole === 'none') || !isMyTurn || selectedCardId === null;
-
-  if (gameState.player1_score >= 11 || gameState.player2_score >= 11) {
-    const winnerName = gameState.player1_score >= 11 ? p1Name : p2Name;
-    document.getElementById("winnerText").textContent = winnerName + " ha vinto la partita!";
-    document.getElementById("finalScore").textContent = `${p1Name}: ${gameState.player1_score} pt | ${p2Name}: ${gameState.player2_score} pt`;
-    document.getElementById("winOverlay").style.display = "flex";
-  }
-
-  if (gameState.chat) {
-    const log = document.getElementById("chatlog");
-    log.replaceChildren();
-    gameState.chat.forEach(msg => {
-      const line = document.createElement("div");
-      line.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
-      log.appendChild(line);
-    });
-    log.scrollTop = log.scrollHeight;
-  }
+ document.getElementById("continueButton").textContent=gameOver?"Nuova partita":"Continua";
+ document.getElementById("modal").classList.remove("hidden");
+ say(gameOver?title:"Mano terminata. Controlla il riepilogo dei punti.");
 }
 
-async function playPlayerCard() {
-  let myRole = (userName === gameState.player2_id) ? 'player2' : 'player1';
-  if (myRole === 'none' || selectedCardId === null) return;
-  if (gameState.turn !== myRole) return;
-
-  let hand = myRole === 'player2' ? gameState.player2_hand : gameState.player1_hand;
-  const card = hand.find(c => c.id === selectedCardId);
-  if (!card) return;
-
-  if (myRole === 'player2') {
-    gameState.player2_hand = hand.filter(c => c.id !== card.id);
-  } else {
-    gameState.player1_hand = hand.filter(c => c.id !== card.id);
-  }
-
-  let matchIndices = findCapture(card, gameState.board_cards);
-  if (matchIndices && matchIndices.length > 0) {
-    let captured = [card];
-    matchIndices.sort((a, b) => b - a);
-    matchIndices.forEach(idx => {
-      captured.push(gameState.board_cards.splice(idx, 1)[0]);
-    });
-
-    if (myRole === 'player1') {
-      gameState.player1_captured = (gameState.player1_captured || []).concat(captured);
-      if (gameState.board_cards.length === 0) {
-        gameState.player1_scope = (gameState.player1_scope || 0) + 1;
-        triggerPartyAnimation();
-      }
-    } else {
-      gameState.player2_captured = (gameState.player2_captured || []).concat(captured);
-      if (gameState.board_cards.length === 0) {
-        gameState.player2_scope = (gameState.player2_scope || 0) + 1;
-        triggerPartyAnimation();
-      }
-    }
-  } else {
-    gameState.board_cards.push(card);
-  }
-
-  let p1H = gameState.player1_hand || [];
-  let p2H = gameState.player2_hand || [];
-  if (p1H.length === 0 && p2H.length === 0) {
-    if (gameState.deck && gameState.deck.length > 0) {
-      gameState.player1_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
-      gameState.player2_hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
-    } else {
-      calculateHandPoints();
-      const deck = makeDeck();
-      gameState.board_cards = [deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-      gameState.player1_hand = [deck.pop(), deck.pop(), deck.pop()];
-      gameState.player2_hand = [deck.pop(), deck.pop(), deck.pop()];
-      gameState.player1_captured = [];
-      gameState.player2_captured = [];
-      gameState.player1_scope = 0;
-      gameState.player2_scope = 0;
-      gameState.deck = deck;
-    }
-  }
-
-  gameState.turn = (myRole === 'player1') ? 'player2' : 'player1';
-  selectedCardId = null;
-
-  await updateRemoteState();
-  render();
+function continueGame(){
+ document.getElementById("modal").classList.add("hidden");
+ if(lastRecap&&lastRecap.gameOver)newGame();
+ else startHand();
 }
 
-function triggerPartyAnimation() {
-  const overlay = document.getElementById("partyOverlay");
-  overlay.style.display = "flex";
-  setTimeout(() => { overlay.style.display = "none"; }, 2000);
+function sendChat(){
+ const input=document.getElementById("chatInput");
+ const value=input.value.trim();
+ if(!value)return;
+
+ const log=document.getElementById("chatlog");
+ if(log.textContent.includes("Benvenuto al tavolo!"))log.replaceChildren();
+
+ const line=document.createElement("div");
+ line.textContent="Tu: "+value;
+ log.appendChild(line);
+ log.scrollTop=log.scrollHeight;
+ input.value="";
 }
 
-async function sendChat() {
-  const input = document.getElementById("chatInput");
-  const val = input.value.trim();
-  if(!val) return;
-
-  if(!gameState.chat) gameState.chat = [];
-  gameState.chat.push({ user: userName, text: val });
-  if(gameState.chat.length > 50) gameState.chat.shift();
-
-  input.value = "";
-  
-  const { error } = await supabaseClient
-    .from('scopa_rooms')
-    .update({ chat: gameState.chat })
-    .eq('room_id', ROOM_ID);
-
-  if (!error) {
-    render();
-  }
-}
-
-document.getElementById('chatInput').addEventListener('keypress', function (e) {
-  if (e.key === 'Enter') {
-    sendChat();
-  }
+document.getElementById("chatInput").addEventListener("keydown",e=>{
+ if(e.key==="Enter")sendChat();
 });
 
-window.addEventListener('DOMContentLoaded', () => { initRoom(); });
+
+// --- Modalità multiplayer Telegram: conserva grafica, carte e pannelli originali ---
+const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegram';
+const mpTg=window.Telegram?.WebApp;
+let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='';
+let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false;
+function mpCard(c){return {...c,value:Number(c.rank),rank:Number(c.rank)};}
+function mpSetMessage(t){document.getElementById('message').textContent=t||'';}
+function mpSetNames(){
+ const me=mpYou==='player1'?mpNames.player1:mpNames.player2;
+ const opp=mpYou==='player1'?mpNames.player2:mpNames.player1;
+ document.getElementById('playerLabel').textContent='LE CARTE DI '+me;
+ document.getElementById('opponentLabel').textContent=opp;
+}
+async function mpCall(payload){
+ const r=await fetch(MP_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,roomId:mpRoom,initData:mpTg?.initData||''})});
+ const d=await r.json().catch(()=>({error:'Risposta del server non valida'}));
+ if(!r.ok||d.error)throw new Error(d.error||('Errore server '+r.status));
+ return d;
+}
+function mpApply(data){
+ const st=data?.state||data;
+ if(!st)return;
+ const oldBoard=JSON.stringify(table.map(c=>c.id));
+ const oldSelected=selected;
+ const oldCaptureOptions=mpCaptureOptions;
+ const oldChosen=mpChosenCapture;
+ mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};
+ hand=(st.hand||[]).map(mpCard);cpu=Array.from({length:st.opponentHandCount||0},()=>({}));table=(st.board||[]).map(mpCard);
+ const sameBoard=oldBoard===JSON.stringify(table.map(c=>c.id));
+ mpCaptureOptions=sameBoard?oldCaptureOptions:[];mpChosenCapture=sameBoard?oldChosen:null;
+ deck=Array.from({length:st.deckCount||0},()=>({}));
+ playerScore=Number(st.scores?.[mpYou]||0);const other=mpYou==='player1'?'player2':'player1';cpuScore=Number(st.scores?.[other]||0);
+ turn=st.turn===mpYou?'player':'opponent';finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
+ mpSetNames();
+ document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
+ document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
+ document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
+ document.getElementById('play').textContent=turn==='player'?(mpChosenCapture!==null?'Conferma presa':'Gioca carta'):'Turno avversario';
+ document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy;
+ const log=document.getElementById('chatlog');log.replaceChildren();
+ (st.chat||[]).forEach(m=>{const line=document.createElement('div');line.textContent=(m.name||'Giocatore')+': '+m.text;log.appendChild(line);});
+ if(!(st.chat||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
+ log.scrollTop=log.scrollHeight;
+ if(st.status==='waiting')mpSetMessage('In attesa del secondo giocatore…');
+ else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;setTimeout(()=>{try{mpTg.close();}catch(e){}},7000);}}
+ else mpSetMessage(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…');
+ render();
+}
+async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'state'});mpApply(d);}catch(e){mpSetMessage(e.message);}}
+async function initMultiplayer(){
+ try{
+  mpTg?.ready();mpTg?.expand();
+  const params=new URLSearchParams(location.search);mpRoom=(params.get('room')||'').trim().toUpperCase();
+  if(!mpRoom){mpSetMessage('Apri la partita dal pulsante pubblicato nel gruppo Telegram.');document.getElementById('score').textContent='In attesa di una stanza Telegram';return;}
+  if(!mpTg?.initData){mpSetMessage('Apri questa pagina dal pulsante Telegram per identificare i due giocatori.');return;}
+  mpBusy=true;document.getElementById('play').disabled=true;
+  const joined=await mpCall({action:'join'});mpApply(joined);mpBusy=false;
+  if(mpPoll)clearInterval(mpPoll);mpPoll=setInterval(mpRefresh,1800);
+ }catch(e){mpBusy=false;mpSetMessage(e.message);}
+}
+function render(){
+ const p=document.getElementById('player'),m=document.getElementById('middle'),o=document.getElementById('opponent');
+ p.replaceChildren();m.replaceChildren();o.replaceChildren();
+ hand.forEach(c=>p.appendChild(cardImage(c,'player')));
+ table.forEach(c=>{
+  const im=cardImage(c,'table');
+  if(mpCaptureOptions.length){
+   const inAny=mpCaptureOptions.some(g=>g.some(x=>x.id===c.id));
+   if(inAny)im.classList.add('capture-option');
+   if(mpChosenCapture!==null&&mpCaptureOptions[mpChosenCapture]?.some(x=>x.id===c.id))im.classList.add('capture-picked');
+   im.onclick=()=>{
+    const containing=mpCaptureOptions.map((g,i)=>g.some(x=>x.id===c.id)?i:-1).filter(i=>i>=0);
+    if(containing.length===1)mpChosenCapture=containing[0];
+    else if(containing.length>1)mpSetMessage('Questa carta appartiene a più prese: scegli una combinazione qui sotto.');
+    document.getElementById('play').textContent=mpChosenCapture!==null?'Conferma presa':'Scegli la presa';
+    render();
+   };
+  }
+  m.appendChild(im);
+ });
+ cpu.forEach(()=>{const b=document.createElement('div');b.className='card back';o.appendChild(b);});
+ if(mpCaptureOptions.length>1){
+  const choices=document.createElement('div');choices.id='captureChoices';
+  mpCaptureOptions.forEach((group,i)=>{const b=document.createElement('button');b.type='button';b.textContent='Presa '+(i+1)+': '+group.map(c=>c.rank).join(' + ');b.style.outline=mpChosenCapture===i?'3px solid #ffe17c':'';b.onclick=()=>{mpChosenCapture=i;document.getElementById('play').textContent='Conferma presa';render();};choices.appendChild(b);});
+  m.appendChild(choices);
+ }
+ document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy||(mpCaptureOptions.length>1&&mpChosenCapture===null);
+}
+async function playPlayer(){
+ if(turn!=='player'||finished||selected===null||mpBusy)return;
+ const card=hand.find(c=>c.id===selected);if(!card)return;
+ const exact=table.find(c=>c.rank===card.rank);const choices=exact?[[exact]]:combos(table,card.rank);
+ let captureIds=[];
+ if(choices.length){
+  if(choices.length>1){
+   if(mpCaptureOptions.length===0||mpChosenCapture===null){mpCaptureOptions=choices;mpChosenCapture=null;mpSetMessage('Le carte verdi indicano le prese possibili. Scegli una combinazione sul tavolo.');render();return;}
+   captureIds=mpCaptureOptions[mpChosenCapture].map(c=>c.id);
+  }else captureIds=choices[0].map(c=>c.id);
+ }
+ mpBusy=true;document.getElementById('play').disabled=true;
+ try{const d=await mpCall({action:'move',cardId:card.id,captureIds});if(d.scopa)celebrate();mpApply(d);}catch(e){mpSetMessage(e.message);await mpRefresh();}
+ finally{mpBusy=false;document.getElementById('play').disabled=turn!=='player'||finished||selected===null;}
+}
+async function sendChat(){
+ const input=document.getElementById('chatInput'),value=input.value.trim();if(!value||mpBusy)return;
+ mpBusy=true;try{const d=await mpCall({action:'chat',text:value});input.value='';mpApply(d);}catch(e){mpSetMessage(e.message);}finally{mpBusy=false;}
+}
+function continueGame(){document.getElementById('modal').classList.add('hidden');mpRefresh();}
+document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+initMultiplayer();
 </script>
+ 
+
 </body>
 </html>
