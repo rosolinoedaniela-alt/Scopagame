@@ -183,6 +183,130 @@ main {
   #chatlog { height:20px; }
 }
 
+
+/* Rifinitura grafica premium: solo CSS, senza modificare carte o logica di gioco */
+:root{
+ --gold:#f7df9a;
+ --gold-light:#fff1c5;
+ --green:#073b29;
+ --cream:#fff7e5;
+}
+body{
+ background:
+  radial-gradient(ellipse at 50% 28%,rgba(38,139,87,.55),transparent 48%),
+  radial-gradient(ellipse at bottom,#03170f 0%,#06291d 58%,#0b4932 100%);
+}
+header{
+ position:relative;
+ background:
+  linear-gradient(115deg,rgba(4,35,24,.97),rgba(24,91,59,.96) 48%,rgba(4,35,24,.97));
+ border-bottom:2px solid var(--gold);
+ box-shadow:0 5px 18px #0008,0 1px 0 #fff2 inset;
+}
+header:after{
+ content:"";
+ display:block;
+ width:min(120px,24vw);
+ height:2px;
+ margin:5px auto 0;
+ background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+.brand{font-weight:700;text-shadow:0 1px 8px #f6d98a66}
+h1{
+ text-shadow:0 2px 0 #6b4b18,0 0 15px #f4d17a66;
+}
+#score{
+ color:#fff4d1;
+ text-shadow:0 1px 8px #0008;
+}
+.panel{
+ border:1px solid rgba(255,225,157,.75);
+ background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(0,0,0,.24));
+ box-shadow:0 5px 14px #0005,inset 0 1px 0 #fff2,inset 0 -1px 0 #f4d68a22;
+}
+.label{
+ color:#ffe5a6;
+ text-shadow:0 1px 5px #0008;
+}
+#opponent{
+ background:radial-gradient(ellipse,rgba(37,120,78,.22),rgba(0,0,0,.08));
+ border-radius:8px;
+}
+#table{
+ position:relative;
+ overflow:hidden;
+ background:
+  radial-gradient(ellipse at 50% 45%,rgba(42,145,91,.92),rgba(9,77,49,.98) 68%),
+  repeating-linear-gradient(35deg,transparent 0 17px,rgba(255,255,255,.018) 18px 19px);
+ border:3px double #f8df9a;
+ box-shadow:inset 0 0 0 4px rgba(0,0,0,.12),inset 0 0 35px #001b10,0 5px 15px #0007;
+}
+#table:before{
+ content:"";
+ position:absolute;
+ inset:7px;
+ border:1px solid rgba(255,230,174,.17);
+ border-radius:8px;
+ pointer-events:none;
+}
+#remaining{
+ position:relative;
+ z-index:1;
+ background:linear-gradient(135deg,#092d20,#1a6443);
+ border:1px solid #ffe7a8;
+ box-shadow:0 2px 9px #00180f99,inset 0 1px #fff3;
+ color:#fff0c5;
+}
+.card{
+ border:2px solid #f4e4bd;
+ border-radius:7px;
+ box-shadow:0 5px 10px #00160dcc,0 0 0 1px #9c783b55;
+ transition:transform .16s ease,box-shadow .16s ease;
+}
+.card.selected{
+ outline:2px solid #ffe28a;
+ box-shadow:0 0 0 3px #6b4b18,0 0 18px #ffe28a,0 8px 12px #00150c;
+}
+.card.capture-option{
+ outline:2px solid #6ff0ad;
+ box-shadow:0 0 0 2px #075b36,0 0 16px #62e6a0;
+}
+button{
+ background:linear-gradient(145deg,#fff0b8 0%,#e7bd62 48%,#b9842d 100%);
+ border:1px solid #fff0bd;
+ box-shadow:0 3px 0 #76501d,0 5px 10px #0005,inset 0 1px #fff9;
+ text-shadow:0 1px #fff8;
+}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #76501d,0 2px 5px #0005}
+button:disabled{box-shadow:none}
+#chat{
+ background:linear-gradient(145deg,rgba(4,43,29,.96),rgba(2,25,18,.98));
+ border-color:rgba(247,219,151,.8);
+}
+#chatlog{
+ background:linear-gradient(135deg,#031c13dd,#0b3928dd);
+ border:1px solid rgba(255,226,166,.2);
+ color:#fff4dc;
+}
+#chatInput{
+ border:1px solid #f2d58e;
+ box-shadow:inset 0 2px 4px #62451b22,0 1px 0 #fff8;
+}
+#message{
+ color:#ffedb8;
+ text-shadow:0 1px 5px #0009;
+}
+.dialog{
+ background:radial-gradient(ellipse at top,#1d7049,#082b1e 75%);
+ border:2px solid #ffe4a0;
+ box-shadow:0 0 0 5px #071d14cc,0 15px 45px #000b,inset 0 1px #fff3;
+}
+@media (max-width:420px){
+ h1{letter-spacing:1.3px}
+ .panel{border-radius:12px}
+ #table:before{inset:5px}
+}
+
 </style>
 </head>
 <body>
