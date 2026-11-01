@@ -999,7 +999,7 @@ async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'st
 async function initMultiplayer(){
  try{
   mpTg?.ready();mpTg?.expand();
-  const params=new URLSearchParams(location.search);mpRoom=(params.get('room')||'').trim().toUpperCase();
+  const params=new URLSearchParams(location.search);const startParam=mpTg?.initDataUnsafe?.start_param||params.get('tgWebAppStartParam')||params.get('startapp')||'';mpRoom=(params.get('room')||startParam).replace(/^room_/i,'').trim().toUpperCase();
   if(!mpRoom){mpSetMessage('Apri la partita dal pulsante pubblicato nel gruppo Telegram.');document.getElementById('score').textContent='In attesa di una stanza Telegram';return;}
   if(!mpTg?.initData){mpSetMessage('Apri questa pagina dal pulsante Telegram per identificare i due giocatori.');return;}
   mpBusy=true;document.getElementById('play').disabled=true;
