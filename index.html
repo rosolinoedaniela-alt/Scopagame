@@ -677,6 +677,39 @@ h1{max-width:calc(100% - 8px);margin-left:auto!important;margin-right:auto!impor
 .card{touch-action:manipulation}
 #player .card{cursor:pointer}
 
+
+/* Tavolo ordinato: contatore mazzo nell'intestazione e carte sempre intere */
+header #remaining{
+ display:block!important;width:max-content;max-width:calc(100% - 12px);
+ margin:3px auto 0!important;padding:3px 9px!important;
+ border:1px solid #ffe5a0!important;border-radius:18px!important;
+ font-size:9px!important;line-height:12px!important;
+ position:relative!important;z-index:1;
+}
+#table{overflow:visible!important;min-height:0!important}
+#middle{
+ display:grid!important;
+ grid-template-columns:repeat(auto-fit,minmax(clamp(48px,13vw,66px),1fr));
+ justify-items:center;align-content:start;align-items:center;
+ gap:5px!important;padding:5px!important;
+ min-height:0!important;flex:1 1 auto;overflow-y:auto!important;
+ overscroll-behavior:contain;
+}
+#middle .card{
+ width:clamp(48px,13vw,66px)!important;
+ max-width:100%;height:auto!important;max-height:none!important;
+ aspect-ratio:1324/2188;flex:0 0 auto;
+}
+#captureChoices{grid-column:1/-1}
+#handIndicator{
+ color:#fff0b8!important;font-weight:900!important;
+ text-shadow:0 1px 5px #000,0 0 9px #f5d58b88;
+}
+@media(max-height:650px){
+ header #remaining{margin-top:2px!important;padding:2px 7px!important;font-size:8px!important;line-height:10px!important}
+ #middle{gap:3px!important;padding:3px!important}
+}
+
 </style>
 </head>
 <body>
@@ -688,6 +721,7 @@ h1{max-width:calc(100% - 8px);margin-left:auto!important;margin-right:auto!impor
  <div class="scoreline"><div id="progress"></div></div>
  <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
  <div id="handIndicator" aria-live="polite">IN ATTESA DEI GIOCATORI</div>
+ <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
   <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
  <button id="rulesBtn" type="button" onclick="openRules()">📖 REGOLE</button>
 </header>
@@ -701,7 +735,6 @@ h1{max-width:calc(100% - 8px);margin-left:auto!important;margin-right:auto!impor
 
  <section class="panel" id="table">
   <div class="label">✦ TAVOLO DA GIOCO ✦</div>
-  <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
   <div id="middle" class="area"></div>
  </section>
 
@@ -1186,7 +1219,7 @@ document.getElementById("chatInput").addEventListener("keydown",e=>{
 const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegram-staging';
 const mpTg=window.Telegram?.WebApp;
 let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='',mpSpectator=false,mpSpectatorCounts={player1:0,player2:0};
-let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0;
+let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0,mpLastHandNo=0,mpHandAnnouncement='',mpHandAnnouncementUntil=0;
 function mpCard(c){
  const rank=Number(c.rank),suitIndex=suits.indexOf(c.suit);
  const byId=Number(c.id)-1;
@@ -1321,7 +1354,7 @@ function mpApply(data){
  const other=mpYou==='player1'?'player2':'player1';playerScore=mpSpectator?Number(st.scores?.player1||0):Number(st.scores?.[mpYou]||0);cpuScore=mpSpectator?Number(st.scores?.player2||0):Number(st.scores?.[other]||0);
  turn=mpSpectator?'spectator':(st.turn===mpYou?'player':'opponent');finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
  mpSetNames();
- const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:handLabel;
+ const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);if(mpLastHandNo&&handNo>mpLastHandNo&&st.status==='playing'){mpHandAnnouncement='✦ '+handLabel+' · CARTE RIDISTRIBUITE ✦';mpHandAnnouncementUntil=Date.now()+6500;}mpLastHandNo=handNo;document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:(Date.now()<mpHandAnnouncementUntil?handLabel+' · CARTE RIDISTRIBUITE':handLabel);
  document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
  document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
@@ -1332,7 +1365,7 @@ function mpApply(data){
  if(st.status==='waiting')mpStopTurnTimer();
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
  else if(st.status==='finished'){mpStopTurnTimer();mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpSpectator&&!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
- else {mpSetMessage(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…'));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
+ else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…')));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
 async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'state',spectator:mpSpectator});mpApply(d);}catch(e){mpSetMessage(e.message);}}
