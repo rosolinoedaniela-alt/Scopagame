@@ -733,13 +733,13 @@ function takeCard(card,who){
     cpuScopes++;
    }
    celebrate();
-   say(who==="player"?"SCOPA! Hai preso tutte le carte!":"Il computer ha fatto SCOPA!");
+   say(who==="player"?"SCOPA! Hai preso tutte le carte!":"L'avversario ha fatto SCOPA!");
   }else{
-   say(who==="player"?"Hai preso le carte.":"Il computer ha preso le carte.");
+   say(who==="player"?"Hai preso le carte.":"L'avversario ha preso le carte.");
   }
  }else{
   table.push(card);
-  say(who==="player"?"Carta calata sul tavolo.":"Il computer ha calato una carta.");
+  say(who==="player"?"Carta calata sul tavolo.":"L'avversario ha calato una carta.");
  }
  return true;
 }
@@ -869,7 +869,7 @@ function finishHand(){
 
  const gameOver=playerScore>=11||cpuScore>=11;
  const title=gameOver?
-  (playerScore===cpuScore?"Parità!":playerScore>cpuScore?"🏆 Hai vinto la partita!":"Il computer ha vinto la partita"):
+  (playerScore===cpuScore?"Parità!":playerScore>cpuScore?"🏆 Hai vinto la partita!":"L'avversario ha vinto la partita"):
   "Mano terminata!";
 
  showRecap(pRows,cRows,p,c,title,gameOver);
@@ -927,14 +927,31 @@ function continueGame(){
  else startHand();
 }
 
-function sendChat(){
+async function sendChat(){
  const input=document.getElementById("chatInput");
  const value=input.value.trim();
  if(!value)return;
 
+ // Nella Mini App la chat è condivisa tramite Supabase tra i due giocatori.
+ if(typeof mpRoom!=="undefined"&&mpRoom){
+  if(mpBusy)return;
+  mpBusy=true;
+  try{
+   const result=await mpCall({action:"chat",text:value});
+   input.value="";
+   mpBusy=false;
+   mpApply(result);
+  }catch(e){
+   mpBusy=false;
+   mpSetMessage(e.message);
+   render();
+  }
+  return;
+ }
+
+ // Mantiene il comportamento locale della versione originale fuori da Telegram.
  const log=document.getElementById("chatlog");
  if(log.textContent.includes("Benvenuto al tavolo!"))log.replaceChildren();
-
  const line=document.createElement("div");
  line.textContent="Tu: "+value;
  log.appendChild(line);
