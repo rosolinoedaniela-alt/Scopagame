@@ -1305,7 +1305,7 @@ async function toggleVoice(){
   voiceStopTimer=setTimeout(()=>{if(voiceRecorder?.state==='recording')voiceRecorder.stop();},30000);
  }catch(error){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;mpSetMessage('Microfono non disponibile: autorizza l’accesso al microfono nel browser.');}
 }
-const MP_TURN_SECONDS=30;
+const MP_TURN_SECONDS=20;
 let mpTimerInterval=null,mpTimerDeadline=0,mpTimerRunning=false,mpAutoMoveBusy=false;
 function mpStopTurnTimer(){
  mpTimerRunning=false;mpTimerDeadline=0;
@@ -1366,7 +1366,7 @@ function mpApply(data){
  const other=mpYou==='player1'?'player2':'player1';playerScore=mpSpectator?Number(st.scores?.player1||0):Number(st.scores?.[mpYou]||0);cpuScore=mpSpectator?Number(st.scores?.player2||0):Number(st.scores?.[other]||0);
  turn=mpSpectator?'spectator':(st.turn===mpYou?'player':'opponent');finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
  mpSetNames();
- const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);if(st.status==='playing'&&handNo>mpLastHandNo){mpHandAnnouncement='✦ '+handLabel+' ✦';mpHandAnnouncementUntil=Date.now()+2000;const overlay=document.getElementById('handOverlay');document.getElementById('handOverlayText').textContent=mpHandAnnouncement;overlay.classList.remove('hidden');if(mpHandOverlayTimer)clearTimeout(mpHandOverlayTimer);mpHandOverlayTimer=setTimeout(()=>overlay.classList.add('hidden'),2000);}mpLastHandNo=Math.max(mpLastHandNo,handNo);document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:handLabel;
+ const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);if(st.status==='playing'&&handNo>mpLastHandNo){mpHandAnnouncement='✦ '+handLabel+' ✦';mpHandAnnouncementUntil=Date.now()+900;const overlay=document.getElementById('handOverlay');document.getElementById('handOverlayText').textContent=mpHandAnnouncement;overlay.classList.remove('hidden');if(mpHandOverlayTimer)clearTimeout(mpHandOverlayTimer);mpHandOverlayTimer=setTimeout(()=>overlay.classList.add('hidden'),900);}mpLastHandNo=Math.max(mpLastHandNo,handNo);document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:handLabel;
  document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
  document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
@@ -1376,7 +1376,7 @@ function mpApply(data){
   renderChatMessages(st.chat||[]);
  if(st.status==='waiting')mpStopTurnTimer();
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpStopTurnTimer();document.getElementById('handOverlay').classList.add('hidden');if(!mpSpectator&&mpTg?.close){if(!mpCloseScheduled){mpCloseScheduled=true;let secondsLeft=5;const finish=document.getElementById('finishOverlay');document.getElementById('finishOverlayText').textContent=st.winnerName?'VINCE '+st.winnerName:'PARTITA TERMINATA';const counter=document.getElementById('finishCountdown');finish.classList.remove('hidden');counter.textContent=secondsLeft;mpSetMessage('');const returnCountdown=setInterval(()=>{secondsLeft-=1;counter.textContent=String(Math.max(0,secondsLeft));if(secondsLeft<=0){clearInterval(returnCountdown);try{mpTg.close();}catch(e){}}},1000);}}else{mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');}}
+ else if(st.status==='finished'){mpStopTurnTimer();document.getElementById('handOverlay').classList.add('hidden');if(!mpSpectator&&mpTg?.close){if(!mpCloseScheduled){mpCloseScheduled=true;let secondsLeft=3;const finish=document.getElementById('finishOverlay');document.getElementById('finishOverlayText').textContent=st.winnerName?'VINCE '+st.winnerName:'PARTITA TERMINATA';const counter=document.getElementById('finishCountdown');finish.classList.remove('hidden');counter.textContent=secondsLeft;mpSetMessage('');const returnCountdown=setInterval(()=>{secondsLeft-=1;counter.textContent=String(Math.max(0,secondsLeft));if(secondsLeft<=0){clearInterval(returnCountdown);try{mpTg.close();}catch(e){}}},1000);}}else{mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');}}
  else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…')));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
@@ -1389,7 +1389,7 @@ async function initMultiplayer(){
   if(!mpTg?.initData){mpSetMessage('Apri questa pagina dal pulsante Telegram per identificare i due giocatori.');return;}
   mpBusy=true;document.getElementById('play').disabled=true;
   const joined=await mpCall({action:mpSpectator?'watch':'join'});mpApply(joined);mpBusy=false;
-  if(mpPoll)clearInterval(mpPoll);mpPoll=setInterval(mpRefresh,1800);
+  if(mpPoll)clearInterval(mpPoll);mpPoll=setInterval(mpRefresh,1000);
  }catch(e){mpBusy=false;mpSetMessage(e.message);}
 }
 function render(){
