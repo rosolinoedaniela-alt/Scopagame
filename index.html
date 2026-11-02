@@ -1364,7 +1364,7 @@ function mpApply(data){
   renderChatMessages(st.chat||[]);
  if(st.status==='waiting')mpStopTurnTimer();
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpStopTurnTimer();mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpSpectator&&!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
+ else if(st.status==='finished'){mpStopTurnTimer();if(!mpSpectator&&mpTg?.close){if(!mpCloseScheduled){mpCloseScheduled=true;let secondsLeft=5;mpSetMessage('TORNERAI NEL GRUPPO TRA '+secondsLeft+' SECONDI');const returnCountdown=setInterval(()=>{secondsLeft-=1;if(secondsLeft>0){mpSetMessage('TORNERAI NEL GRUPPO TRA '+secondsLeft+' SECONDI');}else{clearInterval(returnCountdown);mpSetMessage('RITORNO AL GRUPPO…');try{mpTg.close();}catch(e){}}},1000);}}else{mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');}}
  else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…')));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
