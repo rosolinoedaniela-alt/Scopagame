@@ -519,6 +519,41 @@ header:after{
 .rules-dialog p,.rules-dialog li{font-size:13px;line-height:1.45;color:#fff4dc}
 .rules-dialog ul{padding-left:20px;margin:5px 0}
 .rules-dialog .close-rules{display:block;margin:13px auto 0}
+
+/* Vista spettatore: riduce gli ingombri verticali per mostrare tutte le carte */
+body.spectator-view main{
+  grid-template-rows:minmax(0,.78fr) minmax(0,1.12fr) minmax(0,.78fr) auto minmax(0,1fr);
+  gap:3px;
+  padding:3px 5px;
+}
+body.spectator-view main>.panel{min-height:0;padding:3px 4px}
+body.spectator-view #opponent,
+body.spectator-view #player{min-height:0!important;overflow:visible}
+body.spectator-view .card{
+  width:clamp(38px,11vw,64px)!important;
+  max-height:min(14dvh,92px)!important;
+}
+body.spectator-view .back{
+  width:clamp(38px,11vw,64px)!important;
+  height:min(13dvh,84px)!important;
+}
+body.spectator-view #table{min-height:0}
+body.spectator-view #middle{min-height:0;flex:1;align-content:center}
+body.spectator-view #chat{min-height:0;padding:3px 4px}
+body.spectator-view #chatlog{height:clamp(28px,6dvh,48px)!important;min-height:0!important}
+body.spectator-view .chatrow{margin-top:2px}
+body.spectator-view #chatInput{padding:5px;font-size:11px}
+body.spectator-view #chat button{padding:5px 7px}
+@media(max-height:620px){
+  body.spectator-view header{padding:2px 5px}
+  body.spectator-view header:after{display:none}
+  body.spectator-view #rulesBtn{padding:3px 7px;margin:2px auto}
+  body.spectator-view main{gap:2px;padding:2px 4px}
+  body.spectator-view .card{width:clamp(34px,9vw,52px)!important;max-height:11dvh!important}
+  body.spectator-view .back{width:clamp(34px,9vw,52px)!important;height:10dvh!important}
+  body.spectator-view #chatlog{height:24px!important}
+}
+
 </style>
 </head>
 <body>
@@ -1176,7 +1211,7 @@ async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'st
 async function initMultiplayer(){
  try{
   mpTg?.ready();mpTg?.expand();
-  const params=new URLSearchParams(location.search);const startParam=mpTg?.initDataUnsafe?.start_param||params.get('tgWebAppStartParam')||params.get('startapp')||'';mpSpectator=/^watch_/i.test(startParam);mpRoom=(params.get('room')||startParam).replace(/^(room_|watch_)/i,'').trim().toUpperCase();
+  const params=new URLSearchParams(location.search);const startParam=mpTg?.initDataUnsafe?.start_param||params.get('tgWebAppStartParam')||params.get('startapp')||'';mpSpectator=/^watch_/i.test(startParam);document.body.classList.toggle('spectator-view',mpSpectator);mpRoom=(params.get('room')||startParam).replace(/^(room_|watch_)/i,'').trim().toUpperCase();
   if(!mpRoom){mpSetMessage('Apri la partita dal pulsante pubblicato nel gruppo Telegram.');document.getElementById('score').textContent='In attesa di una stanza Telegram';return;}
   if(!mpTg?.initData){mpSetMessage('Apri questa pagina dal pulsante Telegram per identificare i due giocatori.');return;}
   mpBusy=true;document.getElementById('play').disabled=true;
