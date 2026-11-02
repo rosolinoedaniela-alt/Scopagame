@@ -1375,7 +1375,7 @@ async function sendChat(){
   return;
  }
  mpChatBusy=true;
- const sendButton=input.parentElement.querySelector('button');
+ const sendButton=input.parentElement.querySelector('button:last-of-type');
  if(sendButton){sendButton.disabled=true;sendButton.textContent='Invio…';}
  try{
   let d;
