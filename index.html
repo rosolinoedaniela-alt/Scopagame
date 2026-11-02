@@ -554,6 +554,39 @@ body.spectator-view #chat button{padding:5px 7px}
   body.spectator-view #chatlog{height:24px!important}
 }
 
+
+/* Correzione definitiva vista giocatore: carte e pulsanti sempre dentro lo schermo */
+main{
+ grid-template-rows:minmax(0,.78fr) minmax(0,1.18fr) minmax(0,1.12fr) auto minmax(0,.82fr);
+ gap:3px;
+}
+main>.panel{min-height:0;padding:3px 4px}
+#opponent,#player{min-height:0!important;overflow:visible}
+#player{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px}
+#player .card{width:clamp(40px,11vw,66px)!important;max-height:min(12dvh,88px)!important}
+#opponent .card,#opponent .back{width:clamp(40px,11vw,66px)!important;max-height:min(12dvh,88px)!important}
+#play{display:block;flex:0 0 auto;min-height:30px;padding:5px 12px;margin:2px auto;font-size:12px;position:relative;z-index:2}
+#abandonBtn{flex:0 0 auto;width:min(100%,270px);margin:2px auto 0;padding:5px 8px;font-size:10px;position:relative;z-index:2}
+#turnTimer{margin:1px auto;padding:2px 8px;font-size:10px}
+#chat{min-height:0}
+#chatlog{height:clamp(24px,5dvh,42px)!important;min-height:0!important}
+@media(max-height:700px){
+ main{grid-template-rows:minmax(0,.72fr) minmax(0,1.05fr) minmax(0,1.12fr) auto minmax(0,.72fr);gap:2px;padding:2px 4px}
+ main>.panel{padding:2px 3px}
+ #player .card,#opponent .card,#opponent .back{width:clamp(36px,9vw,54px)!important;max-height:10dvh!important}
+ #play{min-height:26px;padding:4px 9px;font-size:11px}
+ #abandonBtn{padding:4px 6px;font-size:9px}
+ #chatlog{height:22px!important}
+}
+@media(max-height:570px){
+ header{padding:2px 4px}
+ header:after{display:none}
+ #rulesBtn{margin:1px auto;padding:2px 6px}
+ main{grid-template-rows:minmax(0,.68fr) minmax(0,1fr) minmax(0,1.12fr) auto minmax(0,.65fr)}
+ #player .card,#opponent .card,#opponent .back{width:clamp(32px,8vw,46px)!important;max-height:9dvh!important}
+ #abandonBtn{font-size:8px;padding:3px}
+}
+
 </style>
 </head>
 <body>
@@ -586,6 +619,7 @@ body.spectator-view #chat button{padding:5px 7px}
   <div id="player" class="area"></div>
   <div id="turnTimer" aria-live="polite">⏱️ 30</div>
   <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
+  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
  </section>
 
  <div id="message" aria-live="polite"></div>
@@ -599,7 +633,6 @@ body.spectator-view #chat button{padding:5px 7px}
    <button onclick="sendChat()">Invia</button>
   </div>
   <div class="note">Chat condivisa tra i due giocatori.</div>
-  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
  </section>
 </main>
 
