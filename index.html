@@ -688,6 +688,7 @@ h1{max-width:calc(100% - 8px);margin-left:auto!important;margin-right:auto!impor
  <div class="scoreline"><div id="progress"></div></div>
  <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
  <div id="handIndicator" aria-live="polite">IN ATTESA DEI GIOCATORI</div>
+  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
  <button id="rulesBtn" type="button" onclick="openRules()">📖 REGOLE</button>
 </header>
 
@@ -709,7 +710,6 @@ h1{max-width:calc(100% - 8px);margin-left:auto!important;margin-right:auto!impor
   <div id="player" class="area"></div>
   <div id="turnTimer" aria-live="polite">⏱️ 30</div>
   <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
-  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
  </section>
 
  <div id="message" aria-live="polite"></div>
