@@ -1,5 +1,7 @@
 const { Telegraf, Markup } = require('telegraf');
-8821144054:AAG0SourrPS
+if (!process.env.BOT_TOKEN) {
+  throw new Error('Missing BOT_TOKEN environment variable');
+}
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 
