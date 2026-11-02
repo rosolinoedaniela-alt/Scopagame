@@ -509,7 +509,7 @@ header:after{
 #abandonBtn.hidden{display:none!important}
 #abandonBtn:disabled{opacity:.6}
 
-#rulesBtn{position:absolute;right:7px;top:5px;z-index:3;margin:0;padding:4px 7px;font-size:9px;border-radius:7px;letter-spacing:.2px}
+#rulesBtn{position:static;display:block;margin:5px auto 0;padding:5px 10px;font-size:10px;border-radius:7px;letter-spacing:.2px}
 #rulesOverlay{position:fixed;inset:0;z-index:30;background:#00150fee;display:flex;align-items:center;justify-content:center;padding:12px}
 #rulesOverlay.hidden{display:none!important}
 .rules-dialog{width:min(100%,440px);max-height:88dvh;overflow:auto;text-align:left;background:radial-gradient(ellipse at top,#26764c,#06281b 75%);border:3px double #ffe6a0;border-radius:18px;padding:17px 15px;box-shadow:0 0 0 5px #071d14cc,0 15px 45px #000b}
@@ -1132,7 +1132,15 @@ let mpChatBusy=false;
 async function sendChat(){
  const input=document.getElementById('chatInput'),value=input.value.trim();
  if(!value||mpChatBusy)return;
- if(!mpRoom||!mpTg?.initData){mpSetMessage('Apri la stanza dal pulsante Telegram per usare la chat.');return;}
+ if(!mpRoom||!mpTg?.initData){
+  const log=document.getElementById('chatlog');
+  if(log.textContent.includes('Benvenuto al tavolo!')||log.textContent.includes('Chat del tavolo: buon divertimento!'))log.replaceChildren();
+  const line=document.createElement('div');
+  line.textContent='Anteprima: '+value+' (messaggio visibile solo qui)';
+  log.appendChild(line);log.scrollTop=log.scrollHeight;input.value='';
+  mpSetMessage('Anteprima ChatGPT: i messaggi non vengono condivisi con Telegram.');
+  return;
+ }
  mpChatBusy=true;
  const sendButton=input.parentElement.querySelector('button');
  if(sendButton){sendButton.disabled=true;sendButton.textContent='Invio…';}
