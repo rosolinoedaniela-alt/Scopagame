@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Scopa di Monopolygoita</title>
+<title>Dany presenta - Monopolygoita Scopa</title>
 <style>
 *{box-sizing:border-box}
 :root{--gold:#f5d58b;--green:#063e2b;--cream:#fff4d9}
@@ -512,8 +512,8 @@ header:after{
 </head>
 <body>
 <header>
- <div class="brand">MONOPOLY DANI PRESENTA</div>
- <h1>SCOPA DI MONOPOLY GOITA</h1>
+ <div class="brand">DANY PRESENTA</div>
+ <h1>MONOPOLYGOITA SCOPA</h1>
  <div style="color:#f9e5b1">Carte napoletane</div>
  <div id="score">In attesa dei giocatori…</div>
  <div class="scoreline"><div id="progress"></div></div>
@@ -554,13 +554,13 @@ header:after{
  </section>
 </main>
 
-<footer>Scopa Napoletana · Monopolygoita</footer>
+<footer>Dany presenta · Monopolygoita Scopa</footer>
 <div id="confetti"></div>
 <div id="scopaBanner" class="hidden">SCOPA!</div>
 
 <div id="modal" class="hidden">
  <div class="dialog">
-  <div class="brand">MONOPOLYGOITA</div>
+  <div class="brand">DANY PRESENTA</div>
   <h2 id="modalTitle">Riepilogo della mano</h2>
   <div id="resultTitle"></div>
   <div id="recapScore"></div>
@@ -986,7 +986,13 @@ const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegr
 const mpTg=window.Telegram?.WebApp;
 let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='',mpSpectator=false,mpSpectatorCounts={player1:0,player2:0};
 let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0;
-function mpCard(c){return {...c,value:Number(c.rank),rank:Number(c.rank)};}
+function mpCard(c){
+ const rank=Number(c.rank),suitIndex=suits.indexOf(c.suit);
+ const byId=Number(c.id)-1;
+ const bySuitRank=suitIndex>=0&&rank>=1&&rank<=10?suitIndex*10+rank-1:-1;
+ const fileIndex=Number.isInteger(byId)&&byId>=0&&byId<files.length?byId:bySuitRank;
+ return {...c,value:rank,rank,file:c.file||(fileIndex>=0?files[fileIndex]:'')};
+}
 function mpSetMessage(t){const el=document.getElementById('message');el.textContent=t||'';el.classList.toggle('turn-yours',!!t&&t.startsWith('Tocca a te'));}
 function mpSetNames(){
  if(mpSpectator){document.getElementById('playerLabel').textContent='CARTE DI '+mpNames.player1;document.getElementById('opponentLabel').textContent='CARTE DI '+mpNames.player2;return;}
