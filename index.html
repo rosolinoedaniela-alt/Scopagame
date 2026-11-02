@@ -505,6 +505,9 @@ header:after{
 .card.capture-option{filter:brightness(1.2) saturate(1.35);outline:4px solid #70ffc0!important;box-shadow:0 0 0 3px #075b36,0 0 22px #62e6a0!important}
 #play:not(:disabled){filter:brightness(1.12);box-shadow:0 0 0 2px #fff1b8,0 0 18px #ffe28aaa,0 4px 0 #76501d!important}
 @media(max-height:700px){.card{width:clamp(52px,15vw,82px)!important;max-height:118px!important}.back{width:clamp(52px,15vw,82px)!important;height:clamp(72px,21vw,118px)!important}#opponent{min-height:82px!important}#middle{min-height:108px!important}#player{min-height:86px!important}#chatlog{height:78px!important;min-height:78px}}
+#abandonBtn{display:block;width:100%;margin-top:7px;background:linear-gradient(180deg,#8b2929,#551515);border:1px solid #efb3a0;color:#fff4e8;font-weight:900;letter-spacing:.4px;padding:8px 10px;border-radius:9px;box-shadow:0 2px 0 #351010}
+#abandonBtn.hidden{display:none!important}
+#abandonBtn:disabled{opacity:.6}
 </style>
 </head>
 <body>
@@ -547,6 +550,7 @@ header:after{
    <button onclick="sendChat()">Invia</button>
   </div>
   <div class="note">Chat condivisa tra i due giocatori.</div>
+  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
  </section>
 </main>
 
@@ -1018,7 +1022,8 @@ function mpApply(data){
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
  document.getElementById('play').classList.toggle('hidden',mpSpectator);document.getElementById('play').textContent=turn==='player'?(mpChosenCapture!==null?'Conferma presa':'Gioca carta'):'Turno avversario';
  document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy;
- const log=document.getElementById('chatlog');log.replaceChildren();
+ const abandonButton=document.getElementById('abandonBtn');if(abandonButton)abandonButton.classList.toggle('hidden',mpSpectator||st.status!=='playing');
+  const log=document.getElementById('chatlog');log.replaceChildren();
  (st.chat||[]).forEach(m=>{const line=document.createElement('div');line.textContent=(m.name||'Giocatore')+': '+m.text;log.appendChild(line);});
  if(!(st.chat||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
  log.scrollTop=log.scrollHeight;
@@ -1103,6 +1108,19 @@ async function sendChat(){
   mpApply(d);
  }catch(e){mpSetMessage('Messaggio non inviato: '+e.message);}
  finally{mpChatBusy=false;if(sendButton){sendButton.disabled=false;sendButton.textContent='Invia';}}
+}
+async function abandonGame(){
+ if(mpSpectator||!mpRoom||mpBusy||finished)return;
+ const confirmed=await new Promise(resolve=>{
+  if(mpTg?.showConfirm)mpTg.showConfirm('Se abbandoni, la partita termina subito e la vittoria viene assegnata all’avversario. Vuoi continuare?',resolve);
+  else resolve(window.confirm('Se abbandoni, la partita termina subito e la vittoria viene assegnata all’avversario. Vuoi continuare?'));
+ });
+ if(!confirmed)return;
+ mpBusy=true;
+ const btn=document.getElementById('abandonBtn');if(btn){btn.disabled=true;btn.textContent='Chiusura partita…';}
+ try{const result=await mpCall({action:'abandon'});mpApply(result);}
+ catch(e){mpSetMessage(e.message);await mpRefresh();}
+ finally{mpBusy=false;if(btn){btn.disabled=false;btn.textContent='🚪 ABBANDONA LA PARTITA';}}
 }
 function continueGame(){document.getElementById('modal').classList.add('hidden');mpRefresh();}
 document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
