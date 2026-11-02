@@ -497,7 +497,8 @@ header:after{
 .card{width:clamp(56px,16vw,92px)!important;max-height:136px!important}
 .back{width:clamp(56px,16vw,92px)!important;height:clamp(78px,22vw,136px)!important}
 #opponent{min-height:90px!important}#middle{min-height:118px!important}#player{min-height:94px!important}
-#chatlog{height:68px!important;min-height:68px;font-size:12px!important;line-height:1.35!important}
+#chatlog{height:88px!important;min-height:88px;font-size:12px!important;line-height:1.35!important}
+#handIndicator{margin-top:3px;color:#ffe7a6;font-size:12px;font-weight:900;letter-spacing:2px;text-shadow:0 0 9px #ffe28a99}
 #message.turn-yours{margin:2px 4px;padding:7px 9px!important;border:2px solid #ffe28a;border-radius:10px;background:linear-gradient(90deg,#684715,#b98228,#684715);color:#fff8dc!important;font-size:13px!important;font-weight:900;box-shadow:0 0 15px #ffdc70aa;animation:turnPulse 1.25s ease-in-out infinite alternate}
 @keyframes turnPulse{from{box-shadow:0 0 6px #ffdc7066}to{box-shadow:0 0 18px #ffdc70cc}}
 .card.selected{filter:brightness(1.16) saturate(1.2);transform:translateY(-8px) scale(1.04)!important;outline:4px solid #fff0a0!important;box-shadow:0 0 0 3px #8a5c1b,0 0 24px #ffe28a,0 9px 15px #00150c!important}
@@ -514,6 +515,7 @@ header:after{
  <div id="score">In attesa dei giocatori…</div>
  <div class="scoreline"><div id="progress"></div></div>
  <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
+ <div id="handIndicator" aria-live="polite">IN ATTESA DEI GIOCATORI</div>
 </header>
 
 <main>
@@ -978,11 +980,12 @@ document.getElementById("chatInput").addEventListener("keydown",e=>{
 // --- Modalità multiplayer Telegram: conserva grafica, carte e pannelli originali ---
 const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegram-staging';
 const mpTg=window.Telegram?.WebApp;
-let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='';
+let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='',mpSpectator=false,mpSpectatorCounts={player1:0,player2:0};
 let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0;
 function mpCard(c){return {...c,value:Number(c.rank),rank:Number(c.rank)};}
 function mpSetMessage(t){const el=document.getElementById('message');el.textContent=t||'';el.classList.toggle('turn-yours',!!t&&t.startsWith('Tocca a te'));}
 function mpSetNames(){
+ if(mpSpectator){document.getElementById('playerLabel').textContent='CARTE DI '+mpNames.player1;document.getElementById('opponentLabel').textContent='CARTE DI '+mpNames.player2;return;}
  const me=mpYou==='player1'?mpNames.player1:mpNames.player2;
  const opp=mpYou==='player1'?mpNames.player2:mpNames.player1;
  document.getElementById('playerLabel').textContent='LE CARTE DI '+me;
@@ -1001,44 +1004,45 @@ function mpApply(data){
  const oldSelected=selected;
  const oldCaptureOptions=mpCaptureOptions;
  const oldChosen=mpChosenCapture;
- mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};const scopaEvent=Number(st.scopaEvent||0);if(scopaEvent>mpLastScopaEvent)celebrate();mpLastScopaEvent=scopaEvent;
- hand=(st.hand||[]).map(mpCard);cpu=Array.from({length:st.opponentHandCount||0},()=>({}));table=(st.board||[]).map(mpCard);
+ mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};mpSpectatorCounts={player1:Number(st.handCounts?.player1||0),player2:Number(st.handCounts?.player2||0)};const scopaEvent=Number(st.scopaEvent||0);if(scopaEvent>mpLastScopaEvent)celebrate();mpLastScopaEvent=scopaEvent;
+ hand=(st.hand||[]).map(mpCard);cpu=Array.from({length:mpSpectator?0:(st.opponentHandCount||0)},()=>({}));table=(st.board||[]).map(mpCard);
  const sameBoard=oldBoard===JSON.stringify(table.map(c=>c.id));
  mpCaptureOptions=sameBoard?oldCaptureOptions:[];mpChosenCapture=sameBoard?oldChosen:null;
  deck=Array.from({length:st.deckCount||0},()=>({}));
- playerScore=Number(st.scores?.[mpYou]||0);const other=mpYou==='player1'?'player2':'player1';cpuScore=Number(st.scores?.[other]||0);
- turn=st.turn===mpYou?'player':'opponent';finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
+ const other=mpYou==='player1'?'player2':'player1';playerScore=mpSpectator?Number(st.scores?.player1||0):Number(st.scores?.[mpYou]||0);cpuScore=mpSpectator?Number(st.scores?.player2||0):Number(st.scores?.[other]||0);
+ turn=mpSpectator?'spectator':(st.turn===mpYou?'player':'opponent');finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
  mpSetNames();
+ const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:handLabel;
  document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
  document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
- document.getElementById('play').textContent=turn==='player'?(mpChosenCapture!==null?'Conferma presa':'Gioca carta'):'Turno avversario';
+ document.getElementById('play').classList.toggle('hidden',mpSpectator);document.getElementById('play').textContent=turn==='player'?(mpChosenCapture!==null?'Conferma presa':'Gioca carta'):'Turno avversario';
  document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy;
  const log=document.getElementById('chatlog');log.replaceChildren();
  (st.chat||[]).forEach(m=>{const line=document.createElement('div');line.textContent=(m.name||'Giocatore')+': '+m.text;log.appendChild(line);});
  if(!(st.chat||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
  log.scrollTop=log.scrollHeight;
- if(st.status==='waiting')mpSetMessage('In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
- else mpSetMessage(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…');
+ if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
+ else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpSpectator&&!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
+ else mpSetMessage(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…'));
  render();
 }
-async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'state'});mpApply(d);}catch(e){mpSetMessage(e.message);}}
+async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'state',spectator:mpSpectator});mpApply(d);}catch(e){mpSetMessage(e.message);}}
 async function initMultiplayer(){
  try{
   mpTg?.ready();mpTg?.expand();
-  const params=new URLSearchParams(location.search);const startParam=mpTg?.initDataUnsafe?.start_param||params.get('tgWebAppStartParam')||params.get('startapp')||'';mpRoom=(params.get('room')||startParam).replace(/^room_/i,'').trim().toUpperCase();
+  const params=new URLSearchParams(location.search);const startParam=mpTg?.initDataUnsafe?.start_param||params.get('tgWebAppStartParam')||params.get('startapp')||'';mpSpectator=/^watch_/i.test(startParam);mpRoom=(params.get('room')||startParam).replace(/^(room_|watch_)/i,'').trim().toUpperCase();
   if(!mpRoom){mpSetMessage('Apri la partita dal pulsante pubblicato nel gruppo Telegram.');document.getElementById('score').textContent='In attesa di una stanza Telegram';return;}
   if(!mpTg?.initData){mpSetMessage('Apri questa pagina dal pulsante Telegram per identificare i due giocatori.');return;}
   mpBusy=true;document.getElementById('play').disabled=true;
-  const joined=await mpCall({action:'join'});mpApply(joined);mpBusy=false;
+  const joined=await mpCall({action:mpSpectator?'watch':'join'});mpApply(joined);mpBusy=false;
   if(mpPoll)clearInterval(mpPoll);mpPoll=setInterval(mpRefresh,1800);
  }catch(e){mpBusy=false;mpSetMessage(e.message);}
 }
 function render(){
  const p=document.getElementById('player'),m=document.getElementById('middle'),o=document.getElementById('opponent');
  p.replaceChildren();m.replaceChildren();o.replaceChildren();
- hand.forEach(c=>p.appendChild(cardImage(c,'player')));
+ if(mpSpectator){for(let i=0;i<mpSpectatorCounts.player1;i++){const b=document.createElement('div');b.className='card back';p.appendChild(b);}}else hand.forEach(c=>p.appendChild(cardImage(c,'player')));
  table.forEach(c=>{
   const im=cardImage(c,'table');
   if(mpCaptureOptions.length){
@@ -1055,8 +1059,8 @@ function render(){
   }
   m.appendChild(im);
  });
- cpu.forEach(()=>{const b=document.createElement('div');b.className='card back';o.appendChild(b);});
- if(mpCaptureOptions.length>1){
+ if(mpSpectator){for(let i=0;i<mpSpectatorCounts.player2;i++){const b=document.createElement('div');b.className='card back';o.appendChild(b);}}else cpu.forEach(()=>{const b=document.createElement('div');b.className='card back';o.appendChild(b);});
+ if(mpCaptureOptions.length>1&&!mpSpectator){
   const choices=document.createElement('div');choices.id='captureChoices';
   mpCaptureOptions.forEach((group,i)=>{const b=document.createElement('button');b.type='button';b.textContent='Presa '+(i+1)+': '+group.map(c=>c.rank).join(' + ');b.style.outline=mpChosenCapture===i?'3px solid #ffe17c':'';b.onclick=()=>{mpChosenCapture=i;document.getElementById('play').textContent='Conferma presa';render();};choices.appendChild(b);});
   m.appendChild(choices);
@@ -1088,11 +1092,11 @@ async function sendChat(){
  if(sendButton){sendButton.disabled=true;sendButton.textContent='Invio…';}
  try{
   let d;
-  try{d=await mpCall({action:'chat',text:value});}
+  try{d=await mpCall({action:'chat',text:value,spectator:mpSpectator});}
   catch(firstError){
    if(/contemporane|aggiorna|version/i.test(firstError.message)){
-    const fresh=await mpCall({action:'state'});mpApply(fresh);
-    d=await mpCall({action:'chat',text:value});
+    const fresh=await mpCall({action:'state',spectator:mpSpectator});mpApply(fresh);
+    d=await mpCall({action:'chat',text:value,spectator:mpSpectator});
    }else throw firstError;
   }
   if(input.value.trim()===value)input.value='';
