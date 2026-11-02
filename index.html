@@ -66,6 +66,7 @@ button{
 }
 button:active{transform:scale(.97)}
 button:disabled{opacity:.4;cursor:default}
+#turnTimer{display:none;margin:4px auto;padding:4px 12px;width:max-content;border:1px solid #f3d68a;border-radius:20px;background:#09291c;color:#ffe9a5;font-weight:900;font-variant-numeric:tabular-nums;box-shadow:0 0 8px #e7bd5b44}#turnTimer.active{display:block}#turnTimer.urgent{background:#7a241b;color:#fff1e8;border-color:#ff9380;animation:timerPulse .5s infinite alternate}@keyframes timerPulse{to{box-shadow:0 0 12px #ff554488}}
 #message{min-height:0;padding:0;line-height:1.4;font-weight:bold;color:#ffe7a7}
 #chat{text-align:left}
 #chatlog{height:100px;overflow:auto;background:#031c13aa;border-radius:10px;padding:9px;font-size:13px;line-height:1.5}
@@ -548,6 +549,7 @@ header:after{
  <section class="panel">
   <div class="label" id="playerLabel">LE TUE CARTE</div>
   <div id="player" class="area"></div>
+  <div id="turnTimer" aria-live="polite">⏱️ 30</div>
   <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
  </section>
 
@@ -1095,6 +1097,38 @@ async function toggleVoice(){
   voiceStopTimer=setTimeout(()=>{if(voiceRecorder?.state==='recording')voiceRecorder.stop();},30000);
  }catch(error){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;mpSetMessage('Microfono non disponibile: autorizza l’accesso al microfono nel browser.');}
 }
+const MP_TURN_SECONDS=30;
+let mpTimerInterval=null,mpTimerDeadline=0,mpTimerRunning=false,mpAutoMoveBusy=false;
+function mpStopTurnTimer(){
+ mpTimerRunning=false;mpTimerDeadline=0;
+ if(mpTimerInterval){clearInterval(mpTimerInterval);mpTimerInterval=null;}
+ const el=document.getElementById('turnTimer');if(el){el.classList.remove('active','urgent');el.textContent='⏱️ '+MP_TURN_SECONDS;}
+}
+function mpStartTurnTimer(){
+ if(mpTimerRunning||finished||mpSpectator||turn!=='player'||!mpRoom)return;
+ mpTimerRunning=true;mpTimerDeadline=Date.now()+MP_TURN_SECONDS*1000;
+ const el=document.getElementById('turnTimer');el.classList.add('active');
+ const tick=()=>{
+  if(!mpTimerRunning)return;
+  const left=Math.max(0,Math.ceil((mpTimerDeadline-Date.now())/1000));
+  el.textContent='⏱️ '+left+'s';el.classList.toggle('urgent',left<=5);
+  if(left<=0){mpStopTurnTimer();mpAutoPlay();}
+ };
+ tick();mpTimerInterval=setInterval(tick,250);
+}
+async function mpAutoPlay(){
+ if(mpAutoMoveBusy||mpBusy||finished||turn!=='player'||!hand.length)return;
+ mpAutoMoveBusy=true;mpBusy=true;document.getElementById('play').disabled=true;
+ try{
+  const card=hand[Math.floor(Math.random()*hand.length)];
+  const exact=table.find(c=>c.rank===card.rank);
+  const choices=exact?[[exact]]:combos(table,card.rank);
+  const captureIds=choices.length?choices[0].map(c=>c.id):[];
+  mpSetMessage('⏱️ Tempo scaduto: il bot ha giocato automaticamente una carta.');
+  const d=await mpCall({action:'move',cardId:card.id,captureIds});mpApply(d);
+ }catch(e){mpSetMessage('Mossa automatica non riuscita: '+e.message);await mpRefresh();}
+ finally{mpBusy=false;mpAutoMoveBusy=false;document.getElementById('play').disabled=turn!=='player'||finished||selected===null;}
+}
 function mpSetMessage(t){const el=document.getElementById('message');el.textContent=t||'';el.classList.toggle('turn-yours',!!t&&t.startsWith('Tocca a te'));}
 function mpSetNames(){
  if(mpSpectator){document.getElementById('playerLabel').textContent='CARTE DI '+mpNames.player1;document.getElementById('opponentLabel').textContent='CARTE DI '+mpNames.player2;return;}
@@ -1132,9 +1166,10 @@ function mpApply(data){
  document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy;
  const abandonButton=document.getElementById('abandonBtn');if(abandonButton)abandonButton.classList.toggle('hidden',mpSpectator||st.status!=='playing');
   renderChatMessages(st.chat||[]);
+ if(st.status==='waiting')mpStopTurnTimer();
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpSpectator&&!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
- else mpSetMessage(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…'));
+ else if(st.status==='finished'){mpStopTurnTimer();mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpSpectator&&!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
+ else {mpSetMessage(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…'));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
 async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'state',spectator:mpSpectator});mpApply(d);}catch(e){mpSetMessage(e.message);}}
