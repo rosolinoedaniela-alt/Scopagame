@@ -710,6 +710,16 @@ header #remaining{
  #middle{gap:3px!important;padding:3px!important}
 }
 
+
+/* Pulsante abbandona compatto: non invade il titolo */
+#abandonBtn{display:inline-block!important;width:auto!important;position:static!important;margin:3px auto 0!important;padding:4px 11px!important;font-size:10px!important;line-height:1.1!important;letter-spacing:.5px!important}
+#handOverlay,#finishOverlay{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:18px;background:#00150dcc;backdrop-filter:blur(3px);pointer-events:none}
+#handOverlay.hidden,#finishOverlay.hidden{display:none!important}
+#handOverlay .announcement,#finishOverlay .announcement{width:min(92vw,520px);padding:24px 16px;border:3px double #ffe6a0;border-radius:20px;background:radial-gradient(ellipse at top,#26764c,#06281b 75%);box-shadow:0 0 0 5px #071d14cc,0 15px 45px #000b,inset 0 1px #fff3;color:#fff0bd;text-align:center;font-weight:1000;letter-spacing:2px;text-shadow:0 2px 10px #000;font-size:clamp(28px,8vw,48px)}
+#finishOverlay{z-index:45;pointer-events:auto;background:#00150fee}
+#finishOverlay .announcement{font-size:clamp(20px,5vw,32px);letter-spacing:1px}
+#finishOverlay .countdown{display:block;margin-top:12px;color:#ffe28a;font-size:clamp(42px,12vw,68px)}
+
 </style>
 </head>
 <body>
@@ -722,7 +732,7 @@ header #remaining{
  <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
  <div id="handIndicator" aria-live="polite">IN ATTESA DEI GIOCATORI</div>
  <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
-  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">🚪 ABBANDONA LA PARTITA</button>
+  <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">ABBANDONA</button>
  <button id="rulesBtn" type="button" onclick="openRules()">📖 REGOLE</button>
 </header>
 
@@ -761,6 +771,8 @@ header #remaining{
 
 <footer>Dany presenta · Monopolygoita Scopa</footer>
 <div id="confetti"></div>
+<div id="handOverlay" class="hidden" aria-live="assertive"><div class="announcement" id="handOverlayText"></div></div>
+<div id="finishOverlay" class="hidden" role="status" aria-live="assertive"><div class="announcement"><div id="finishOverlayText">PARTITA TERMINATA</div><span class="countdown" id="finishCountdown">5</span><div style="font-size:13px;letter-spacing:.5px">RITORNO AL GRUPPO</div></div></div>
 <div id="rulesOverlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" onclick="if(event.target===this)closeRules()">
  <div class="rules-dialog">
   <h2 id="rulesTitle">📖 REGOLE DELLA SCOPA</h2>
@@ -1219,7 +1231,7 @@ document.getElementById("chatInput").addEventListener("keydown",e=>{
 const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegram-staging';
 const mpTg=window.Telegram?.WebApp;
 let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='',mpSpectator=false,mpSpectatorCounts={player1:0,player2:0};
-let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0,mpLastHandNo=0,mpHandAnnouncement='',mpHandAnnouncementUntil=0;
+let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0,mpLastHandNo=0,mpHandAnnouncement='',mpHandAnnouncementUntil=0,mpHandOverlayTimer=null;
 function mpCard(c){
  const rank=Number(c.rank),suitIndex=suits.indexOf(c.suit);
  const byId=Number(c.id)-1;
@@ -1354,7 +1366,7 @@ function mpApply(data){
  const other=mpYou==='player1'?'player2':'player1';playerScore=mpSpectator?Number(st.scores?.player1||0):Number(st.scores?.[mpYou]||0);cpuScore=mpSpectator?Number(st.scores?.player2||0):Number(st.scores?.[other]||0);
  turn=mpSpectator?'spectator':(st.turn===mpYou?'player':'opponent');finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
  mpSetNames();
- const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);if(mpLastHandNo&&handNo>mpLastHandNo&&st.status==='playing'){mpHandAnnouncement='✦ '+handLabel+' · CARTE RIDISTRIBUITE ✦';mpHandAnnouncementUntil=Date.now()+6500;}mpLastHandNo=handNo;document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:(Date.now()<mpHandAnnouncementUntil?handLabel+' · CARTE RIDISTRIBUITE':handLabel);
+ const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);if(st.status==='playing'&&handNo>mpLastHandNo){mpHandAnnouncement='✦ '+handLabel+' ✦';mpHandAnnouncementUntil=Date.now()+2000;const overlay=document.getElementById('handOverlay');document.getElementById('handOverlayText').textContent=mpHandAnnouncement;overlay.classList.remove('hidden');if(mpHandOverlayTimer)clearTimeout(mpHandOverlayTimer);mpHandOverlayTimer=setTimeout(()=>overlay.classList.add('hidden'),2000);}mpLastHandNo=Math.max(mpLastHandNo,handNo);document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:handLabel;
  document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
  document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
@@ -1364,7 +1376,7 @@ function mpApply(data){
   renderChatMessages(st.chat||[]);
  if(st.status==='waiting')mpStopTurnTimer();
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpStopTurnTimer();if(!mpSpectator&&mpTg?.close){if(!mpCloseScheduled){mpCloseScheduled=true;let secondsLeft=5;mpSetMessage('TORNERAI NEL GRUPPO TRA '+secondsLeft+' SECONDI');const returnCountdown=setInterval(()=>{secondsLeft-=1;if(secondsLeft>0){mpSetMessage('TORNERAI NEL GRUPPO TRA '+secondsLeft+' SECONDI');}else{clearInterval(returnCountdown);mpSetMessage('RITORNO AL GRUPPO…');try{mpTg.close();}catch(e){}}},1000);}}else{mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');}}
+ else if(st.status==='finished'){mpStopTurnTimer();document.getElementById('handOverlay').classList.add('hidden');if(!mpSpectator&&mpTg?.close){if(!mpCloseScheduled){mpCloseScheduled=true;let secondsLeft=5;const finish=document.getElementById('finishOverlay');document.getElementById('finishOverlayText').textContent=st.winnerName?'VINCE '+st.winnerName:'PARTITA TERMINATA';const counter=document.getElementById('finishCountdown');finish.classList.remove('hidden');counter.textContent=secondsLeft;mpSetMessage('');const returnCountdown=setInterval(()=>{secondsLeft-=1;counter.textContent=String(Math.max(0,secondsLeft));if(secondsLeft<=0){clearInterval(returnCountdown);try{mpTg.close();}catch(e){}}},1000);}}else{mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');}}
  else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…')));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
@@ -1464,7 +1476,7 @@ async function abandonGame(){
  const btn=document.getElementById('abandonBtn');if(btn){btn.disabled=true;btn.textContent='Chiusura partita…';}
  try{const result=await mpCall({action:'abandon'});mpApply(result);}
  catch(e){mpSetMessage(e.message);await mpRefresh();}
- finally{mpBusy=false;if(btn){btn.disabled=false;btn.textContent='🚪 ABBANDONA LA PARTITA';}}
+ finally{mpBusy=false;if(btn){btn.disabled=false;btn.textContent='ABBANDONA';}}
 }
 function continueGame(){document.getElementById('modal').classList.add('hidden');mpRefresh();}
 function openRules(){document.getElementById('rulesOverlay').classList.remove('hidden');}
