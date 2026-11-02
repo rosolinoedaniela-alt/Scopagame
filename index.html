@@ -653,6 +653,30 @@ footer{display:none!important}
  #chatlog{height:22px!important}
 }
 
+
+/* Correzioni richieste: controlli separati dalle carte e titolo libero */
+header{padding-top:23px!important;padding-left:6px!important;padding-right:6px!important}
+header .brand{margin-top:0}
+h1{max-width:calc(100% - 8px);margin-left:auto!important;margin-right:auto!important}
+#rulesBtn{
+ position:absolute!important;right:6px!important;top:4px!important;
+ width:auto!important;margin:0!important;padding:4px 7px!important;
+ font-size:9px!important;z-index:8!important;transform:none!important
+}
+#abandonBtn{
+ position:absolute!important;left:6px!important;top:4px!important;
+ width:auto!important;max-width:46%!important;min-height:0!important;
+ margin:0!important;padding:4px 6px!important;font-size:8px!important;
+ line-height:1.15!important;letter-spacing:0!important;z-index:8!important;
+ white-space:nowrap
+}
+#abandonBtn.hidden{display:none!important}
+#player{row-gap:7px!important}
+#play{margin-top:7px!important;margin-bottom:4px!important;min-height:32px!important}
+#turnTimer{margin-top:3px!important;margin-bottom:2px!important}
+.card{touch-action:manipulation}
+#player .card{cursor:pointer}
+
 </style>
 </head>
 <body>
@@ -796,7 +820,12 @@ function cardImage(c,area){
  im.loading="lazy";
  im.onerror=()=>{im.style.background="#f2dfb0";};
  if(area==="player"&&turn==="player"&&!finished){
-  im.onclick=()=>{selected=c.id;render();};
+  im.onclick=()=>{
+   selected=c.id;
+   render();
+   // In multiplayer, tap once to play immediately; ambiguous captures still ask for a choice.
+   if(mpRoom)playPlayer();
+  };
  }
  return im;
 }
