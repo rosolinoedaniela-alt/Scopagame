@@ -471,7 +471,7 @@ header:after{
 }
 #chat .label{font-size:10px !important}
 #chatlog div{padding:2px 0;border-bottom:1px solid rgba(255,231,177,.08)}
-#chat button{min-width:64px}
+#chat button{min-width:64px}#voiceBtn{min-width:40px!important;padding:6px 8px!important;font-size:16px!important}#voiceBtn.recording{background:linear-gradient(180deg,#ffb2a8,#c43a32)!important;color:#fff!important;animation:voicePulse .9s infinite alternate}@keyframes voicePulse{to{filter:brightness(1.2);box-shadow:0 0 0 3px #ffb0a866,0 0 14px #ff4b4b}}.voice-message{display:flex;flex-direction:column;gap:4px;padding:5px 0;border-bottom:1px solid #ffffff18}.voice-message audio{width:min(100%,260px);height:34px}
 #message{
  padding:2px 5px !important;
  color:#ffedb8 !important;
@@ -558,6 +558,7 @@ header:after{
   <div id="chatlog" aria-live="polite">Benvenuto al tavolo! Buona partita.</div>
   <div class="chatrow">
    <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
+   <button id="voiceBtn" type="button" onclick="toggleVoice()" aria-label="Registra un vocale">🎙️</button>
    <button onclick="sendChat()">Invia</button>
   </div>
   <div class="note">Chat condivisa tra i due giocatori.</div>
@@ -1028,6 +1029,72 @@ function mpCard(c){
  const fileIndex=Number.isInteger(byId)&&byId>=0&&byId<files.length?byId:bySuitRank;
  return {...c,value:rank,rank,file:c.file||(fileIndex>=0?files[fileIndex]:'')};
 }
+let voiceRecorder=null,voiceChunks=[],voiceStream=null,voiceStartedAt=0,voiceStopTimer=null,mpChatSignature='';
+function renderChatMessages(messages,force=false){
+ const log=document.getElementById('chatlog');
+ const signature=JSON.stringify((messages||[]).map(m=>({type:m.type||'text',name:m.name||'',text:m.text||'',path:m.path||'',duration:m.duration||0})));
+ if(!force&&signature===mpChatSignature)return;
+ mpChatSignature=signature;log.replaceChildren();
+ (messages||[]).forEach(m=>{
+  const line=document.createElement('div');
+  if(m.type==='voice'){
+   line.className='voice-message';
+   const label=document.createElement('strong');label.textContent=(m.name||'Giocatore')+' · 🎙️ Vocale ('+(Number(m.duration)||1)+'s)';
+   line.appendChild(label);
+   if(m.audioUrl){const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=m.audioUrl;line.appendChild(audio);}
+   else{const missing=document.createElement('span');missing.textContent='Audio non disponibile al momento';line.appendChild(missing);}
+  }else{line.textContent=(m.name||'Giocatore')+': '+(m.text||'');}
+  log.appendChild(line);
+ });
+ if(!(messages||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
+ log.scrollTop=log.scrollHeight;
+}
+function localVoiceMessage(blob,duration){
+ const log=document.getElementById('chatlog');
+ if(log.textContent.includes('Benvenuto al tavolo!')||log.textContent.includes('Chat del tavolo: buon divertimento!'))log.replaceChildren();
+ const line=document.createElement('div');line.className='voice-message';
+ const label=document.createElement('strong');label.textContent='Anteprima · 🎙️ Vocale ('+duration+'s)';
+ const audio=document.createElement('audio');audio.controls=true;audio.preload='metadata';audio.src=URL.createObjectURL(blob);
+ line.append(label,audio);log.appendChild(line);log.scrollTop=log.scrollHeight;
+}
+async function toggleVoice(){
+ const btn=document.getElementById('voiceBtn');
+ if(voiceRecorder&&voiceRecorder.state==='recording'){voiceRecorder.stop();return;}
+ if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){mpSetMessage('Il browser non supporta la registrazione vocale. Apri il gioco in un browser aggiornato.');return;}
+ try{
+  voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  voiceChunks=[];
+  const candidates=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'];
+  const mime=candidates.find(t=>MediaRecorder.isTypeSupported(t))||'';
+  voiceRecorder=new MediaRecorder(voiceStream,mime?{mimeType:mime}:{});
+  voiceStartedAt=Date.now();
+  voiceRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data);};
+  voiceRecorder.onstop=async()=>{
+   if(voiceStopTimer)clearTimeout(voiceStopTimer);
+   const duration=Math.max(1,Math.min(30,Math.round((Date.now()-voiceStartedAt)/1000)));
+   const blob=new Blob(voiceChunks,{type:voiceRecorder?.mimeType||'audio/webm'});
+   voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;
+   btn.classList.remove('recording');btn.textContent='🎙️';btn.disabled=true;
+   try{
+    if(!blob.size)throw new Error('Registrazione vuota.');
+    if(blob.size>1500000)throw new Error('Vocale troppo grande: registra un messaggio più breve.');
+    if(mpRoom&&mpTg?.initData){
+     const buffer=new Uint8Array(await blob.arrayBuffer());let binary='';
+     for(let i=0;i<buffer.length;i+=0x8000)binary+=String.fromCharCode(...buffer.subarray(i,i+0x8000));
+     const audioBase64=btoa(binary);
+     const result=await mpCall({action:'voice',audioBase64,mime:blob.type||'audio/webm',duration,spectator:mpSpectator});
+     mpChatSignature='';mpApply(result);
+    }else{
+     localVoiceMessage(blob,duration);
+     mpSetMessage('Anteprima vocale locale: per condividerlo con gli altri serve entrare dalla stanza Telegram.');
+    }
+   }catch(error){mpSetMessage('Vocale non inviato: '+(error instanceof Error?error.message:'errore'));}
+   finally{btn.disabled=false;}
+  };
+  voiceRecorder.start();btn.classList.add('recording');btn.textContent='⏹️';mpSetMessage('Registrazione in corso… tocca ⏹️ per inviare (massimo 30 secondi).');
+  voiceStopTimer=setTimeout(()=>{if(voiceRecorder?.state==='recording')voiceRecorder.stop();},30000);
+ }catch(error){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;mpSetMessage('Microfono non disponibile: autorizza l’accesso al microfono nel browser.');}
+}
 function mpSetMessage(t){const el=document.getElementById('message');el.textContent=t||'';el.classList.toggle('turn-yours',!!t&&t.startsWith('Tocca a te'));}
 function mpSetNames(){
  if(mpSpectator){document.getElementById('playerLabel').textContent='CARTE DI '+mpNames.player1;document.getElementById('opponentLabel').textContent='CARTE DI '+mpNames.player2;return;}
@@ -1064,10 +1131,7 @@ function mpApply(data){
  document.getElementById('play').classList.toggle('hidden',mpSpectator);document.getElementById('play').textContent=turn==='player'?(mpChosenCapture!==null?'Conferma presa':'Gioca carta'):'Turno avversario';
  document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy;
  const abandonButton=document.getElementById('abandonBtn');if(abandonButton)abandonButton.classList.toggle('hidden',mpSpectator||st.status!=='playing');
-  const log=document.getElementById('chatlog');log.replaceChildren();
- (st.chat||[]).forEach(m=>{const line=document.createElement('div');line.textContent=(m.name||'Giocatore')+': '+m.text;log.appendChild(line);});
- if(!(st.chat||[]).length)log.textContent='Chat del tavolo: buon divertimento!';
- log.scrollTop=log.scrollHeight;
+  renderChatMessages(st.chat||[]);
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
  else if(st.status==='finished'){mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');if(!mpSpectator&&!mpCloseScheduled&&mpTg?.close){mpCloseScheduled=true;const elapsed=st.finishedAt?Math.max(0,Date.now()-new Date(st.finishedAt).getTime()):0;setTimeout(()=>{try{mpTg.close();}catch(e){}},Math.max(0,5000-elapsed));}}
  else mpSetMessage(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…'));
