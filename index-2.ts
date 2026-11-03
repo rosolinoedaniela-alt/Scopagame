@@ -44,6 +44,19 @@ if(body.action==='join'){
 room=await getRoom(roomCode);you=playerKey(room,identity.id);if(!you)throw new Error('Prima entra nella stanza premendo il pulsante del gioco.');
 if(body.action==='state')return {state:publicState(room,identity.id)};
 if(body.action==='chat'){if(room.status==='finished')throw new Error('La partita è terminata.');const text=String(body.text||'').trim().slice(0,180);if(!text)throw new Error('Scrivi un messaggio.');const chat=[...(room.chat||[]),{name:identity.name,text,at:new Date().toISOString()}].slice(-60);const {data,error}=await db.from('scopa_telegram_rooms').update({chat,version:room.version+1,updated_at:new Date().toISOString()}).eq('id',room.id).eq('version',room.version).select('*').maybeSingle();if(error)throw error;if(!data)throw new Error('Aggiornamento contemporaneo: riprova.');return {state:publicState(data,identity.id)};}
+if(body.action==='abandon'){
+ if(room.status!=='playing')throw new Error('La partita non è in corso.');
+ const winnerKey=you==='player1'?'player2':'player1';
+ const winnerId=Number(winnerKey==='player1'?room.player1_telegram_id:room.player2_telegram_id);
+ const winnerName=winnerKey==='player1'?room.player1_name:room.player2_name;
+ if(!winnerId)throw new Error('Non è presente un avversario a cui assegnare la vittoria.');
+ const resultMessage='🏆 SCOPA DI MONOPOLYGOITA — PARTITA TERMINATA\\n'+identity.name+' ha abbandonato la partita.\\nVince '+winnerName+'!';
+ const {data,error}=await db.from('scopa_telegram_rooms').update({status:'finished',winner_telegram_id:winnerId,result_message:resultMessage,finished_at:new Date().toISOString(),version:room.version+1,updated_at:new Date().toISOString()}).eq('id',room.id).eq('version',room.version).eq('status','playing').select('*').maybeSingle();
+ if(error)throw error;
+ if(!data)throw new Error('La partita è stata aggiornata da poco. Premi Aggiorna e riprova.');
+ if(data.group_chat_id){try{await telegram('sendMessage',{chat_id:data.group_chat_id,text:resultMessage});}catch(notifyError){console.error('Impossibile notificare il gruppo della resa',notifyError);}}
+ return {state:publicState(data,identity.id)};
+}
 if(body.action!=='move')throw new Error('Azione non riconosciuta.');if(room.status!=='playing')throw new Error('La partita non è in corso.');const g=structuredClone(room.state) as Game;if(g.turn!==you)throw new Error('Non è il tuo turno.');const cardId=Number(body.cardId);const hand=g.hands[you];const card=hand.find(c=>c.id===cardId);if(!card)throw new Error('Questa carta non è nella tua mano.');const captureIds=Array.isArray(body.captureIds)?body.captureIds.map(Number):[];const legal=combinations(g.board,card.rank);let captured:Card[]=[];
 if(captureIds.length){const valid=legal.some(combo=>combo.length===captureIds.length&&combo.every(id=>captureIds.includes(id)));if(!valid)throw new Error('La combinazione selezionata non è valida.');captured=g.board.filter(c=>captureIds.includes(c.id));}else if(legal.length){throw new Error('Devi prendere una combinazione possibile di carte.');}
 hand.splice(hand.findIndex(c=>c.id===cardId),1);let scopa=false;if(captured.length){g.board=g.board.filter(c=>!captureIds.includes(c.id));g.captured[you].push(card,...captured);g.lastCapturer=you;if(g.board.length===0&&(g.hands.player1.length+g.hands.player2.length>0||g.deck.length>0)){g.scopes[you]++;scopa=true;}}else g.board.push(card);
