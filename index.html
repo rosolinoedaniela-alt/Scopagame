@@ -729,6 +729,37 @@ header #remaining{
  #finishReturn{color:#ffe8a5;font-size:12px;font-weight:900;letter-spacing:1px;text-shadow:0 2px 5px #000}
  #finishReturn.hidden{display:none!important}
 
+
+/* Layout aggiornato: tavolo largo, carte intatte e chat in finestra dedicata */
+main{width:100vw!important;max-width:none!important;padding-left:8px!important;padding-right:8px!important}
+#table{overflow:visible!important;min-width:0}
+#middle{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(clamp(54px,13vw,76px),1fr))!important;justify-items:center;align-content:center;align-items:center;gap:5px!important;padding:6px!important;overflow:visible!important;overscroll-behavior:auto}
+#middle .card{width:clamp(56px,13vw,76px)!important;max-width:100%;height:auto!important;max-height:none!important;aspect-ratio:1324/2188;flex:0 0 auto}
+#captureChoices{grid-column:1/-1}
+#chat{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-height:38px!important;padding:3px 6px!important}
+#chatlog,#chatComposer,.note,#chatActions{display:none!important}
+#openChatBtn{display:block!important;margin:0 auto!important;padding:5px 18px!important;font-size:11px!important;min-height:28px}
+#chatActions{gap:10px;justify-content:center;flex:0 0 auto}
+#chatActions button{min-width:130px;padding:10px 14px!important;font-size:13px!important}
+#chatComposer{gap:8px;flex-wrap:wrap;flex:0 0 auto;margin-top:8px!important}
+#chatComposer input{flex:1 1 170px;min-width:0;padding:12px!important;font-size:15px!important}
+#chatComposer button{padding:10px 13px!important;font-size:13px!important}
+body.chat-open #chat{position:fixed!important;z-index:60!important;inset: max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))!important;width:auto!important;max-width:720px!important;height:auto!important;max-height:none!important;margin:auto!important;padding:16px!important;border:3px double #ffe6a0!important;border-radius:18px!important;display:flex!important;align-items:stretch!important;justify-content:flex-start!important;gap:10px!important;box-shadow:0 0 0 100vmax #00150fee,0 15px 45px #000b!important}
+body.chat-open #chat .label{font-size:16px!important;letter-spacing:2px!important;margin:2px 0 6px!important}
+body.chat-open #openChatBtn{display:none!important}
+body.chat-open #chatlog{display:block!important;flex:1 1 auto!important;min-height:100px!important;height:auto!important;max-height:none!important;overflow:auto!important;padding:12px!important;font-size:14px!important;line-height:1.5!important}
+body.chat-open #chatActions{display:flex!important;width:100%}
+body.chat-open #chatComposer{display:none!important;width:100%}
+body.chat-open #chat.composer-visible #chatComposer{display:flex!important}
+body.chat-open #chat .note{display:block!important;text-align:center!important;font-size:11px!important}
+body.chat-open #chatActions #writeChatBtn{display:inline-block!important}
+body.chat-open #chatActions #returnGameBtn{display:inline-block!important}
+header{padding-top:24px!important}
+header h1{max-width:calc(100% - 125px)!important;margin-left:auto!important;margin-right:auto!important}
+#abandonBtn{display:inline-flex!important;align-items:center;justify-content:center;position:absolute!important;left:7px!important;top:5px!important;right:auto!important;bottom:auto!important;width:auto!important;max-width:112px!important;min-height:27px!important;margin:0!important;padding:5px 8px!important;font-size:10px!important;line-height:1!important;z-index:12!important;white-space:nowrap!important}
+#abandonBtn.hidden{display:none!important}
+@media(min-width:700px){main{padding-left:16px!important;padding-right:16px!important}#middle{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))!important}#middle .card{width:clamp(64px,8vw,82px)!important}}
+@media(max-width:390px){header h1{font-size:17px!important;max-width:calc(100% - 112px)!important}#abandonBtn{font-size:9px!important;padding:4px 6px!important}#middle{grid-template-columns:repeat(auto-fit,minmax(52px,1fr))!important;gap:3px!important}}
 </style>
 </head>
 <body>
@@ -768,13 +799,18 @@ header #remaining{
 
  <section class="panel" id="chat">
   <div class="label">💬 CHAT DEL TAVOLO</div>
+  <button id="openChatBtn" type="button" onclick="openChat()">APRI CHAT</button>
   <div id="chatlog" aria-live="polite">Benvenuto al tavolo! Buona partita.</div>
-  <div class="chatrow">
+  <div id="chatActions">
+   <button id="writeChatBtn" type="button" onclick="showChatComposer()">SCRIVI</button>
+   <button id="returnGameBtn" type="button" onclick="closeChat()">TORNA AL GIOCO</button>
+  </div>
+  <div class="chatrow hidden" id="chatComposer">
    <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
    <button id="voiceBtn" type="button" onclick="toggleVoice()" aria-label="Registra un vocale">🎙️</button>
    <button onclick="sendChat()">Invia</button>
   </div>
-  <div class="note">Chat condivisa tra i due giocatori.</div>
+  <div class="note">Chat condivisa tra i giocatori.</div>
  </section>
 </main>
 
