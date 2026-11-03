@@ -1504,6 +1504,23 @@ async function playPlayer(){
  finally{mpBusy=false;document.getElementById('play').disabled=turn!=='player'||finished||selected===null;}
 }
 let mpChatBusy=false;
+function openChat(){
+ const panel=document.getElementById('chat');
+ document.body.classList.add('chat-open');
+ panel.classList.remove('composer-visible');
+ const log=document.getElementById('chatlog');
+ log.scrollTop=log.scrollHeight;
+}
+function showChatComposer(){
+ const panel=document.getElementById('chat');
+ panel.classList.add('composer-visible');
+ const input=document.getElementById('chatInput');
+ if(input)input.focus();
+}
+function closeChat(){
+ document.getElementById('chat').classList.remove('composer-visible');
+ document.body.classList.remove('chat-open');
+}
 async function sendChat(){
  const input=document.getElementById('chatInput'),value=input.value.trim();
  if(!value||mpChatBusy)return;
