@@ -814,7 +814,7 @@ header h1{max-width:calc(100% - 125px)!important;margin-left:auto!important;marg
  <section class="panel">
   <div class="label" id="playerLabel">LE TUE CARTE</div>
   <div id="player" class="area"></div>
-  <div id="turnTimer" aria-live="polite">⏱️ 30</div>
+  <div id="turnTimer" aria-live="polite">⏱️ 15</div>
   <button id="play" onclick="playPlayer()" disabled>Gioca carta</button>
  </section>
 
@@ -1381,7 +1381,7 @@ async function toggleVoice(){
   voiceStopTimer=setTimeout(()=>{if(voiceRecorder?.state==='recording')voiceRecorder.stop();},30000);
  }catch(error){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;mpSetMessage('Microfono non disponibile: autorizza l’accesso al microfono nel browser.');}
 }
-const MP_TURN_SECONDS=20;
+const MP_TURN_SECONDS=15;
 let mpTimerInterval=null,mpTimerDeadline=0,mpTimerRunning=false,mpAutoMoveBusy=false;
 function mpStopTurnTimer(){
  mpTimerRunning=false;mpTimerDeadline=0;
