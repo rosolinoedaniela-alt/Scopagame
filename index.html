@@ -760,6 +760,27 @@ header h1{max-width:calc(100% - 125px)!important;margin-left:auto!important;marg
 #abandonBtn.hidden{display:none!important}
 @media(min-width:700px){main{padding-left:16px!important;padding-right:16px!important}#middle{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))!important}#middle .card{width:clamp(64px,8vw,82px)!important}}
 @media(max-width:390px){header h1{font-size:17px!important;max-width:calc(100% - 112px)!important}#abandonBtn{font-size:9px!important;padding:4px 6px!important}#middle{grid-template-columns:repeat(auto-fit,minmax(52px,1fr))!important;gap:3px!important}}
+
+/* Informazioni di partita su un'unica riga per lasciare più spazio al tavolo */
+.game-meta{
+ display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;
+ gap:clamp(5px,2vw,14px);width:100%;min-width:0;margin:3px auto 1px;
+ color:#ffe7ad;font-size:clamp(8px,2.35vw,11px);font-weight:900;
+ line-height:1.15;white-space:nowrap;letter-spacing:.15px;
+}
+.game-meta #goalLabel,.game-meta #handIndicator,.game-meta #remaining{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-width:0;margin:0;padding:3px 5px;border:1px solid #e8ca7e88;
+ border-radius:7px;background:#001b12a8;color:#fff0c4;
+ font-size:inherit;line-height:1.15;letter-spacing:0;
+}
+.game-meta #handIndicator{flex:0 1 auto;text-shadow:none}
+.game-meta #remaining{flex:0 1 auto;box-shadow:none}
+@media(max-width:360px){
+ .game-meta{gap:3px;font-size:8px}
+ .game-meta #goalLabel,.game-meta #handIndicator,.game-meta #remaining{padding:3px 3px}
+}
+
 </style>
 </head>
 <body>
@@ -769,9 +790,11 @@ header h1{max-width:calc(100% - 125px)!important;margin-left:auto!important;marg
  <div style="color:#f9e5b1">Carte napoletane</div>
  <div id="score">In attesa dei giocatori…</div>
  <div class="scoreline"><div id="progress"></div></div>
- <div style="font-size:11px;color:#d9c99e;margin-top:5px">Obiettivo: 11 punti</div>
- <div id="handIndicator" aria-live="polite">IN ATTESA DEI GIOCATORI</div>
- <div id="remaining">🂠 CARTE NEL MAZZO: 40</div>
+ <div class="game-meta" aria-live="polite">
+  <span id="goalLabel">OBIETTIVO: 11 PUNTI</span>
+  <span id="handIndicator">IN ATTESA</span>
+  <span id="remaining">CARTE NEL MAZZO: 40</span>
+ </div>
   <button id="abandonBtn" class="hidden" onclick="abandonGame()" type="button">ABBANDONA</button>
  <button id="rulesBtn" type="button" onclick="openRules()">📖 REGOLE</button>
 </header>
