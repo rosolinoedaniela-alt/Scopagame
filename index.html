@@ -719,6 +719,15 @@ header #remaining{
 #finishOverlay{z-index:45;pointer-events:auto;background:#00150fee}
 #finishOverlay .announcement{font-size:clamp(20px,5vw,32px);letter-spacing:1px}
 #finishOverlay .countdown{display:block;margin-top:12px;color:#ffe28a;font-size:clamp(42px,12vw,68px)}
+ #finishOverlay{flex-direction:column;gap:8px;overflow:auto}
+ #finishCard{position:relative;width:min(92vw,430px);height:min(78dvh,645px);aspect-ratio:2/3;flex:0 0 auto;filter:drop-shadow(0 12px 24px #000b)}
+ #finishArt{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;border-radius:14px}
+ #finishGameTitle{position:absolute;top:5.5%;left:8%;width:84%;color:#fff4bd;font-size:clamp(13px,3.8vw,21px);font-weight:1000;letter-spacing:1px;text-shadow:0 2px 5px #381400,0 0 12px #ffd65a;text-align:center}
+ #finishWinner{position:absolute;top:63.2%;left:10%;width:80%;transform:translateY(-50%);color:#fff2a0;font-size:clamp(19px,5.5vw,30px);font-weight:1000;line-height:1.12;text-align:center;text-shadow:0 3px 4px #5b0800,0 0 9px #ffb900;overflow-wrap:anywhere}
+ #finishScore{position:absolute;top:79.3%;left:8%;width:84%;transform:translateY(-50%);color:#42210b;font-size:clamp(11px,3.2vw,17px);font-weight:1000;line-height:1.25;text-align:center;overflow-wrap:anywhere}
+ #finishThanks{position:absolute;top:92.3%;left:8%;width:84%;transform:translateY(-50%);color:#fffde5;font-size:clamp(11px,3.3vw,17px);font-weight:1000;text-shadow:0 2px 4px #06410c;text-align:center}
+ #finishReturn{color:#ffe8a5;font-size:12px;font-weight:900;letter-spacing:1px;text-shadow:0 2px 5px #000}
+ #finishReturn.hidden{display:none!important}
 
 </style>
 </head>
@@ -772,7 +781,16 @@ header #remaining{
 <footer>Dany presenta · Monopolygoita Scopa</footer>
 <div id="confetti"></div>
 <div id="handOverlay" class="hidden" aria-live="assertive"><div class="announcement" id="handOverlayText"></div></div>
-<div id="finishOverlay" class="hidden" role="status" aria-live="assertive"><div class="announcement"><div id="finishOverlayText">PARTITA TERMINATA</div><span class="countdown" id="finishCountdown">5</span><div style="font-size:13px;letter-spacing:.5px">RITORNO AL GRUPPO</div></div></div>
+<div id="finishOverlay" class="hidden" role="status" aria-live="assertive">
+  <div id="finishCard">
+   <img id="finishArt" src="scopa-victory.svg" alt="Coppa dorata e decorazioni di vittoria">
+   <div id="finishGameTitle">SCOPA DI MONOPOLY GOITA</div>
+   <div id="finishWinner"></div>
+   <div id="finishScore"></div>
+   <div id="finishThanks">GRAZIE PER AVER GIOCATO!</div>
+  </div>
+  <div id="finishReturn">RITORNO AL GRUPPO TRA <span id="finishCountdown">6</span>s</div>
+ </div>
 <div id="rulesOverlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" onclick="if(event.target===this)closeRules()">
  <div class="rules-dialog">
   <h2 id="rulesTitle">📖 REGOLE DELLA SCOPA</h2>
@@ -865,13 +883,12 @@ function cardImage(c,area){
  im.loading="lazy";
  im.onerror=()=>{im.style.background="#f2dfb0";};
  if(area==="player"&&turn==="player"&&!finished){
-  im.onclick=()=>{
-   selected=c.id;
-   render();
-   // In multiplayer, tap once to play immediately; ambiguous captures still ask for a choice.
-   if(mpRoom)playPlayer();
-  };
- }
+   im.onclick=()=>{
+    if(selected!==c.id&&mpRoom){mpCaptureOptions=[];mpChosenCapture=null;}
+    selected=c.id;
+    render();
+   };
+  }
  return im;
 }
 
@@ -1370,13 +1387,26 @@ function mpApply(data){
  document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
  document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
- document.getElementById('play').classList.toggle('hidden',mpSpectator);document.getElementById('play').textContent=turn==='player'?(mpChosenCapture!==null?'Conferma presa':'Gioca carta'):'Turno avversario';
+ document.getElementById('play').classList.toggle('hidden',mpSpectator);
  document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy;
  const abandonButton=document.getElementById('abandonBtn');if(abandonButton)abandonButton.classList.toggle('hidden',mpSpectator||st.status!=='playing');
   renderChatMessages(st.chat||[]);
  if(st.status==='waiting')mpStopTurnTimer();
  if(st.status==='waiting')mpSetMessage(mpSpectator?'In attesa che entrino i due giocatori…':'In attesa del secondo giocatore…');
- else if(st.status==='finished'){mpStopTurnTimer();document.getElementById('handOverlay').classList.add('hidden');if(!mpSpectator&&mpTg?.close){if(!mpCloseScheduled){mpCloseScheduled=true;let secondsLeft=3;const finish=document.getElementById('finishOverlay');document.getElementById('finishOverlayText').textContent=st.winnerName?'VINCE '+st.winnerName:'PARTITA TERMINATA';const counter=document.getElementById('finishCountdown');finish.classList.remove('hidden');counter.textContent=secondsLeft;mpSetMessage('');const returnCountdown=setInterval(()=>{secondsLeft-=1;counter.textContent=String(Math.max(0,secondsLeft));if(secondsLeft<=0){clearInterval(returnCountdown);try{mpTg.close();}catch(e){}}},1000);}}else{mpSetMessage('Partita conclusa: '+(st.winnerName||'vittoria')+'. Il risultato è stato pubblicato nel gruppo.');}}
+ else if(st.status==='finished'){
+   mpStopTurnTimer();document.getElementById('handOverlay').classList.add('hidden');
+   const p1=Number(st.scores?.player1||0),p2=Number(st.scores?.player2||0);
+   const winner=st.winnerName||(p1===p2?'PAREGGIO':(p1>p2?mpNames.player1:mpNames.player2));
+   document.getElementById('finishWinner').textContent=winner==='PAREGGIO'?'PARTITA IN PARITÀ':'VINCE '+winner+'!';
+   document.getElementById('finishScore').textContent=mpNames.player1+': '+p1+' — '+mpNames.player2+': '+p2;
+   const finish=document.getElementById('finishOverlay'),returnLabel=document.getElementById('finishReturn');
+   finish.classList.remove('hidden');mpSetMessage('');
+   if(mpSpectator){returnLabel.classList.add('hidden');}
+   else if(mpTg?.close&&!mpCloseScheduled){
+    mpCloseScheduled=true;let secondsLeft=6;const counter=document.getElementById('finishCountdown');counter.textContent=secondsLeft;
+    const returnCountdown=setInterval(()=>{secondsLeft-=1;counter.textContent=String(Math.max(0,secondsLeft));if(secondsLeft<=0){clearInterval(returnCountdown);try{mpTg.close();}catch(e){}}},1000);
+   }else if(!mpTg?.close){returnLabel.classList.add('hidden');}
+  }
  else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…')));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
@@ -1418,7 +1448,9 @@ function render(){
   mpCaptureOptions.forEach((group,i)=>{const b=document.createElement('button');b.type='button';b.textContent='Presa '+(i+1)+': '+group.map(c=>c.rank).join(' + ');b.style.outline=mpChosenCapture===i?'3px solid #ffe17c':'';b.onclick=()=>{mpChosenCapture=i;document.getElementById('play').textContent='Conferma presa';render();};choices.appendChild(b);});
   m.appendChild(choices);
  }
- document.getElementById('play').disabled=turn!=='player'||finished||selected===null||mpBusy||(mpCaptureOptions.length>1&&mpChosenCapture===null);
+ const playButton=document.getElementById('play');
+  playButton.textContent=turn!=='player'?'TURNO AVVERSARIO':(selected===null?'SCEGLI UNA CARTA':(mpCaptureOptions.length>1&&mpChosenCapture===null?'SCEGLI LA PRESA':'CONFERMA E GIOCA'));
+  playButton.disabled=turn!=='player'||finished||selected===null||mpBusy||(mpCaptureOptions.length>1&&mpChosenCapture===null);
 }
 async function playPlayer(){
  if(turn!=='player'||finished||selected===null||mpBusy)return;
