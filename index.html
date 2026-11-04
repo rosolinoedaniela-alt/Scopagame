@@ -781,6 +781,21 @@ header h1{max-width:calc(100% - 125px)!important;margin-left:auto!important;marg
  .game-meta #goalLabel,.game-meta #handIndicator,.game-meta #remaining{padding:3px 3px}
 }
 
+
+/* CHAT FISSA: sempre visibile, mai in overlay sulle carte o sui controlli */
+#chat{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:stretch!important;gap:3px!important;min-height:0!important;padding:5px 7px!important;overflow:hidden!important}
+#chat .label{display:flex;align-items:center;justify-content:space-between;margin:0 0 2px!important;font-size:10px!important}
+#chatlog{display:block!important;flex:1 1 auto!important;height:clamp(54px,8dvh,78px)!important;min-height:54px!important;max-height:78px!important;overflow-y:auto!important;padding:5px 7px!important;font-size:11px!important;line-height:1.35!important;overscroll-behavior:contain}
+#chatComposer{display:flex!important;flex:0 0 auto!important;flex-wrap:nowrap!important;gap:4px!important;width:100%!important;margin:2px 0 0!important}
+#chatInput{flex:1 1 auto!important;min-width:0!important;padding:7px 8px!important;font-size:12px!important}
+#chatComposer button{flex:0 0 auto!important;padding:6px 9px!important;font-size:11px!important;min-width:0!important;margin:0!important}
+#chat .note{display:none!important}
+#chatUnread{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 5px;border-radius:20px;background:#c52f26;color:#fff;font-size:9px;font-weight:900;box-shadow:0 0 8px #ff6b55aa}
+#chatUnread.hidden{display:none!important}
+main{grid-template-rows:minmax(70px,.8fr) minmax(115px,1.15fr) minmax(105px,.9fr) minmax(18px,auto) minmax(105px,auto)!important}
+@media(max-height:650px){main{grid-template-rows:minmax(65px,.75fr) minmax(105px,1.1fr) minmax(95px,.85fr) minmax(16px,auto) minmax(92px,auto)!important}#chatlog{height:52px!important;min-height:48px!important}}
+@media(max-width:380px){#chatComposer button{padding:6px 6px!important}#voiceBtn{min-width:30px!important}}
+
 </style>
 </head>
 <body>
@@ -821,14 +836,9 @@ header h1{max-width:calc(100% - 125px)!important;margin-left:auto!important;marg
  <div id="message" aria-live="polite"></div>
 
  <section class="panel" id="chat">
-  <div class="label">💬 CHAT DEL TAVOLO</div>
-  <button id="openChatBtn" type="button" onclick="openChat()">APRI CHAT</button>
-  <div id="chatlog" aria-live="polite">Benvenuto al tavolo! Buona partita.</div>
-  <div id="chatActions">
-   <button id="writeChatBtn" type="button" onclick="showChatComposer()">SCRIVI</button>
-   <button id="returnGameBtn" type="button" onclick="closeChat()">TORNA AL GIOCO</button>
-  </div>
-  <div class="chatrow hidden" id="chatComposer">
+  <div class="label"><span>💬 CHAT DEL TAVOLO</span><span id="chatUnread" class="hidden" aria-live="polite"></span></div>
+  <div id="chatlog" aria-live="polite" aria-label="Messaggi della chat">Benvenuto al tavolo! Buona partita.</div>
+  <div class="chatrow" id="chatComposer">
    <input id="chatInput" maxlength="180" placeholder="Scrivi un messaggio…">
    <button id="voiceBtn" type="button" onclick="toggleVoice()" aria-label="Registra un vocale">🎙️</button>
    <button onclick="sendChat()">Invia</button>
@@ -1315,10 +1325,20 @@ function mpCard(c){
  const fileIndex=Number.isInteger(byId)&&byId>=0&&byId<files.length?byId:bySuitRank;
  return {...c,value:rank,rank,file:c.file||(fileIndex>=0?files[fileIndex]:'')};
 }
-let voiceRecorder=null,voiceChunks=[],voiceStream=null,voiceStartedAt=0,voiceStopTimer=null,mpChatSignature='';
+let voiceRecorder=null,voiceChunks=[],voiceStream=null,voiceStartedAt=0,voiceStopTimer=null,mpChatSignature='',mpChatMessageCount=0,mpChatUnread=0;
+function clearChatUnread(){mpChatUnread=0;const badge=document.getElementById('chatUnread');if(badge){badge.textContent='';badge.classList.add('hidden');}}
 function renderChatMessages(messages,force=false){
  const log=document.getElementById('chatlog');
- const signature=JSON.stringify((messages||[]).map(m=>({type:m.type||'text',name:m.name||'',text:m.text||'',path:m.path||'',duration:m.duration||0})));
+ const list=messages||[];
+ if(list.length>mpChatMessageCount&&mpChatMessageCount>0){
+  const me=mpYou==='player1'?mpNames.player1:mpNames.player2;
+  const incoming=list.slice(mpChatMessageCount).filter(m=>(m.name||'')!==me);
+  mpChatUnread+=incoming.length;
+  const badge=document.getElementById('chatUnread');
+  if(badge&&mpChatUnread){badge.textContent=mpChatUnread>99?'99+':String(mpChatUnread);badge.classList.remove('hidden');}
+ }
+ mpChatMessageCount=list.length;
+ const signature=JSON.stringify(list.map(m=>({type:m.type||'text',name:m.name||'',text:m.text||'',path:m.path||'',duration:m.duration||0})));
  if(!force&&signature===mpChatSignature)return;
  mpChatSignature=signature;log.replaceChildren();
  (messages||[]).forEach(m=>{
@@ -1590,6 +1610,8 @@ function openRules(){document.getElementById('rulesOverlay').classList.remove('h
 function closeRules(){document.getElementById('rulesOverlay').classList.add('hidden');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRules();});
 document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+document.getElementById('chatlog').addEventListener('click',clearChatUnread);
+document.getElementById('chatlog').addEventListener('scroll',()=>{if(document.getElementById('chatlog').scrollTop+document.getElementById('chatlog').clientHeight>=document.getElementById('chatlog').scrollHeight-8)clearChatUnread();});
 initMultiplayer();
 </script>
  
