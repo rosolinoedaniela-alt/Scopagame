@@ -796,6 +796,18 @@ main{grid-template-rows:minmax(70px,.8fr) minmax(115px,1.15fr) minmax(105px,.9fr
 @media(max-height:650px){main{grid-template-rows:minmax(65px,.75fr) minmax(105px,1.1fr) minmax(95px,.85fr) minmax(16px,auto) minmax(92px,auto)!important}#chatlog{height:52px!important;min-height:48px!important}}
 @media(max-width:380px){#chatComposer button{padding:6px 6px!important}#voiceBtn{min-width:30px!important}}
 
+
+/* Turno del giocatore: pannello rosso pulsante, senza coprire le carte */
+#playerPanel.my-turn-active{border:3px solid #ff4747!important;background:linear-gradient(145deg,rgba(120,8,15,.72),rgba(48,5,10,.92))!important;box-shadow:0 0 0 2px #4a080b,0 0 13px #ff2929,0 0 27px #ff292988,inset 0 0 18px #ff454522!important;animation:myTurnRedPulse 1s ease-in-out infinite alternate}
+#playerPanel.my-turn-active .label{color:#fff0ee!important;text-shadow:0 0 8px #ff4949!important}
+@keyframes myTurnRedPulse{from{box-shadow:0 0 0 2px #4a080b,0 0 8px #ff2929,0 0 15px #ff292955,inset 0 0 10px #ff454511}to{box-shadow:0 0 0 3px #690b10,0 0 17px #ff2929,0 0 34px #ff2929aa,inset 0 0 22px #ff454533}}
+/* Dorso blu notte con motivo geometrico oro */
+.card.back{background:radial-gradient(circle at 50% 50%,rgba(238,202,112,.95) 0 5%,transparent 6% 17%,rgba(238,202,112,.55) 18% 20%,transparent 21%),repeating-linear-gradient(45deg,#071a45 0 6px,#173d7b 6px 12px,#c9a653 12px 14px,#173d7b 14px 20px)!important;border:3px double #f3d98d!important;box-shadow:0 5px 0 #10254d,0 8px 11px #001027!important}
+/* Ultima carta giocata: visibile anche dopo una presa */
+#lastMoveNotice{display:none;align-items:center;justify-content:center;gap:7px;min-height:0;padding:2px 4px;color:#fff0c5;font-size:9px;font-weight:900;letter-spacing:.35px;text-shadow:0 1px 4px #00170f}
+#lastMoveNotice.visible{display:flex}
+#lastMoveNotice img{width:23px;height:36px;object-fit:contain;border:1px solid #f3d98d;border-radius:3px;background:#fff5df;box-shadow:0 2px 5px #00170f99}
+@media(max-height:650px){#lastMoveNotice img{width:19px;height:30px}#lastMoveNotice{font-size:8px}}
 </style>
 </head>
 <body>
@@ -824,9 +836,10 @@ main{grid-template-rows:minmax(70px,.8fr) minmax(115px,1.15fr) minmax(105px,.9fr
  <section class="panel" id="table">
   <div class="label">✦ TAVOLO DA GIOCO ✦</div>
   <div id="middle" class="area"></div>
+  <div id="lastMoveNotice" aria-live="polite"></div>
  </section>
 
- <section class="panel">
+ <section class="panel" id="playerPanel">
   <div class="label" id="playerLabel">LE TUE CARTE</div>
   <div id="player" class="area"></div>
   <div id="turnTimer" aria-live="polite">⏱️ 15</div>
@@ -1318,6 +1331,7 @@ const MP_API='https://sommziqnmxgkwyjatxcn.supabase.co/functions/v1/scopa-telegr
 const mpTg=window.Telegram?.WebApp;
 let mpRoom='',mpYou='',mpNames={player1:'Giocatore 1',player2:'Giocatore 2'},mpChat=[],mpBusy=false,mpPoll=null,mpLastStatus='',mpSpectator=false,mpSpectatorCounts={player1:0,player2:0};
 let mpCaptureOptions=[],mpChosenCapture=null,mpCloseScheduled=false,mpLastScopaEvent=0,mpLastHandNo=0,mpHandAnnouncement='',mpHandAnnouncementUntil=0,mpHandOverlayTimer=null;
+let mpLastMove=null;
 function mpCard(c){
  const rank=Number(c.rank),suitIndex=suits.indexOf(c.suit);
  const byId=Number(c.id)-1;
@@ -1454,16 +1468,16 @@ function mpApply(data){
  const oldSelected=selected;
  const oldCaptureOptions=mpCaptureOptions;
  const oldChosen=mpChosenCapture;
- mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};mpSpectatorCounts={player1:Number(st.handCounts?.player1||0),player2:Number(st.handCounts?.player2||0)};const scopaEvent=Number(st.scopaEvent||0);if(scopaEvent>mpLastScopaEvent)celebrate();mpLastScopaEvent=scopaEvent;
+ mpYou=st.you||mpYou;mpNames={player1:st.players?.player1?.name||'Giocatore 1',player2:st.players?.player2?.name||'Giocatore 2'};mpSpectatorCounts={player1:Number(st.handCounts?.player1||0),player2:Number(st.handCounts?.player2||0)};mpLastMove=st.lastMove||null;const scopaEvent=Number(st.scopaEvent||0);if(scopaEvent>mpLastScopaEvent)celebrate();mpLastScopaEvent=scopaEvent;
  hand=(st.hand||[]).map(mpCard);cpu=Array.from({length:mpSpectator?0:(st.opponentHandCount||0)},()=>({}));table=(st.board||[]).map(mpCard);
  const sameBoard=oldBoard===JSON.stringify(table.map(c=>c.id));
  mpCaptureOptions=sameBoard?oldCaptureOptions:[];mpChosenCapture=sameBoard?oldChosen:null;
  deck=Array.from({length:st.deckCount||0},()=>({}));
- const other=mpYou==='player1'?'player2':'player1';playerScore=mpSpectator?Number(st.scores?.player1||0):Number(st.scores?.[mpYou]||0);cpuScore=mpSpectator?Number(st.scores?.player2||0):Number(st.scores?.[other]||0);
+ const other=mpYou==='player1'?'player2':'player1';const displayScores=st.liveScores||st.scores||{};playerScore=mpSpectator?Number(displayScores.player1||0):Number(displayScores[mpYou]||0);cpuScore=mpSpectator?Number(displayScores.player2||0):Number(displayScores[other]||0);
  turn=mpSpectator?'spectator':(st.turn===mpYou?'player':'opponent');finished=st.status==='finished';selected=hand.some(c=>c.id===oldSelected)?oldSelected:null;
  mpSetNames();
  const goalLabel=document.getElementById('goalLabel');if(goalLabel)goalLabel.textContent=st.mode==='single'?'MODALITÀ: UNA MANO':(st.mode==='tournament'?'TORNEO · MANO SINGOLA':'OBIETTIVO: 11 PUNTI');const handNo=Math.max(1,Number(st.handNo||1));const handNames=['','PRIMA MANO','SECONDA MANO','TERZA MANO','QUARTA MANO','QUINTA MANO','SESTA MANO','SETTIMA MANO','OTTAVA MANO','NONA MANO','DECIMA MANO'];const handLabel=handNames[handNo]||('MANO '+handNo);if(st.status==='playing'&&handNo>mpLastHandNo){mpHandAnnouncement='✦ '+handLabel+' ✦';mpHandAnnouncementUntil=Date.now()+900;const overlay=document.getElementById('handOverlay');document.getElementById('handOverlayText').textContent=mpHandAnnouncement;overlay.classList.remove('hidden');if(mpHandOverlayTimer)clearTimeout(mpHandOverlayTimer);mpHandOverlayTimer=setTimeout(()=>overlay.classList.add('hidden'),900);}mpLastHandNo=Math.max(mpLastHandNo,handNo);document.getElementById('handIndicator').textContent=st.status==='finished'?'PARTITA TERMINATA · '+handLabel:handLabel;
- document.getElementById('score').textContent=mpNames.player1+' '+(st.scores?.player1||0)+' — '+mpNames.player2+' '+(st.scores?.player2||0);
+ const baseScores=st.scores||{};const liveScores=st.liveScores||baseScores;const p1Bonus=Math.max(0,Number(liveScores.player1||0)-Number(baseScores.player1||0));const p2Bonus=Math.max(0,Number(liveScores.player2||0)-Number(baseScores.player2||0));document.getElementById('score').textContent=mpNames.player1+' '+Number(liveScores.player1||0)+(p1Bonus?' (+'+p1Bonus+' mano)':'')+' — '+mpNames.player2+' '+Number(liveScores.player2||0)+(p2Bonus?' (+'+p2Bonus+' mano)':'');
  document.getElementById('progress').style.width=Math.min(100,Math.max(playerScore,cpuScore)/11*100)+'%';
  document.getElementById('remaining').textContent='🂠 CARTE NEL MAZZO: '+(st.deckCount||0);
  document.getElementById('play').classList.toggle('hidden',mpSpectator);
@@ -1485,7 +1499,7 @@ function mpApply(data){
     const returnCountdown=setInterval(()=>{secondsLeft-=1;counter.textContent=String(Math.max(0,secondsLeft));if(secondsLeft<=0){clearInterval(returnCountdown);try{mpTg.close();}catch(e){}}},1000);
    }else if(!mpTg?.close){returnLabel.classList.add('hidden');}
   }
- else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':(turn==='player'?'Tocca a te: scegli una carta e premi Gioca carta.':'In attesa della mossa di '+mpNames[st.turn]+'…')));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
+ else {mpSetMessage(Date.now()<mpHandAnnouncementUntil?mpHandAnnouncement:(mpSpectator?'Partita in corso · turno di '+mpNames[st.turn]+'…':''));if(turn==='player')mpStartTurnTimer();else mpStopTurnTimer();}
  render();
 }
 async function mpRefresh(){if(mpBusy)return;try{const d=await mpCall({action:'state',spectator:mpSpectator});mpApply(d);}catch(e){mpSetMessage(e.message);}}
@@ -1502,7 +1516,9 @@ async function initMultiplayer(){
 }
 function render(){
  const p=document.getElementById('player'),m=document.getElementById('middle'),o=document.getElementById('opponent');
+ const playerPanel=document.getElementById('playerPanel');if(playerPanel)playerPanel.classList.toggle('my-turn-active',turn==='player'&&!finished&&!mpSpectator);
  p.replaceChildren();m.replaceChildren();o.replaceChildren();
+ const lastMoveNotice=document.getElementById('lastMoveNotice');if(lastMoveNotice){lastMoveNotice.replaceChildren();if(mpLastMove?.card){const label=document.createElement('span');label.textContent='ULTIMA GIOCATA · '+(mpNames[mpLastMove.player]||'Giocatore');const image=document.createElement('img');image.src=imageURL(mpCard(mpLastMove.card));image.alt='Carta giocata: '+(mpLastMove.card.file||'carta');lastMoveNotice.append(label,image);lastMoveNotice.classList.add('visible');}else lastMoveNotice.classList.remove('visible');}
  if(mpSpectator){for(let i=0;i<mpSpectatorCounts.player1;i++){const b=document.createElement('div');b.className='card back';p.appendChild(b);}}else hand.forEach(c=>p.appendChild(cardImage(c,'player')));
  table.forEach(c=>{
   const im=cardImage(c,'table');
